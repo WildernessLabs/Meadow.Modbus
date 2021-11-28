@@ -10,8 +10,11 @@ namespace Meadow.Modbus
 
         private bool m_connected;
 
-        protected abstract byte[] GenerateMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data);
+        protected abstract byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data);
+        protected abstract byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, ushort registerCount);
+
         protected abstract void DeliverMessage(byte[] message);
+        protected abstract byte[] ReadResult();
 
         public abstract void Connect();
         public abstract void Disconnect();
@@ -23,7 +26,7 @@ namespace Meadow.Modbus
             {
                 m_connected = value;
 
-                if(m_connected)
+                if (m_connected)
                 {
                     Connected?.Invoke(this, EventArgs.Empty);
                 }
@@ -34,12 +37,22 @@ namespace Meadow.Modbus
             }
         }
 
-        public void WriteSingleRegister(byte modbusAddress, ushort register, short value)
+        public void WriteHoldingRegister(byte modbusAddress, ushort register, ushort value)
         {
             // swap endianness, because Modbus
             var data = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(value));
-            var message = GenerateMessage(modbusAddress, ModbusFunction.WriteRegister, register, data);
+            var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteRegister, register, data);
             DeliverMessage(message);
+            var result = ReadResult();
+        }
+
+        public ushort[] ReadHoldingRegisters(byte modbusAddress, ushort startRegister, ushort registerCount)
+        {
+            var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
+            DeliverMessage(message);
+            var result = ReadResult();
+
+            return null;
         }
     }
 }

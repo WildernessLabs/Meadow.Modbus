@@ -26,7 +26,28 @@ namespace Meadow.Modbus
             IsConnected = false;
         }
 
-        protected override byte[] GenerateMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
+        protected override byte[] ReadResult()
+        {
+            return null;
+        }
+
+        protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, ushort registerCount)
+        {
+            var message = new byte[8]; // fn 3 is always 8 bytes
+
+            message[0] = modbusAddress;
+            message[1] = (byte)function;
+            message[2] = (byte)(startRegister >> 8);
+            message[3] = (byte)startRegister;
+            message[4] = (byte)(registerCount >> 8);
+            message[5] = (byte)registerCount;
+
+            FillCRC(message);
+
+            return message;
+
+        }
+        protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[]? data)
         {
             var message = new byte[4 + data.Length + 2]; // header + data + crc
 

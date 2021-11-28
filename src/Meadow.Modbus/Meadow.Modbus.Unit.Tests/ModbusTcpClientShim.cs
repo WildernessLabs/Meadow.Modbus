@@ -12,9 +12,15 @@ namespace Meadow.Modbus.Unit.Tests
 
         }
 
-        protected override byte[] GenerateMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
+        protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, ushort registerCount)
         {
-            LastGeneratedMessage = base.GenerateMessage(modbusAddress, function, register, data);
+            LastGeneratedMessage = base.GenerateReadMessage(modbusAddress, function, startRegister, registerCount);
+            return LastGeneratedMessage;
+        }
+
+        protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
+        {
+            LastGeneratedMessage = base.GenerateWriteMessage(modbusAddress, function, register, data);
             return LastGeneratedMessage;
         }
     }

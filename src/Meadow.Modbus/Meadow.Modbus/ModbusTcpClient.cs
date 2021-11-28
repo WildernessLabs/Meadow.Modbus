@@ -24,22 +24,12 @@ namespace Meadow.Modbus
             throw new NotImplementedException();
         }
 
-        protected override byte[] GenerateMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
+        protected override byte[] ReadResult()
         {
-            // Modbus TCP has different headers based on read/write or readwrite
-            switch (function)
-            {
-                case ModbusFunction.WriteRegister:
-                case ModbusFunction.WriteCoil:
-                case ModbusFunction.WriteMultipleCoils:
-                case ModbusFunction.WriteMultipleRegisters:
-                    return GenerateWriteMessage(modbusAddress, function, register, data);
-                default:
-                    throw new NotImplementedException();
-            }
+            return null;
         }
 
-        private byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
+        protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
         {
             // single and multiples are slightly different
             var headerSize = function switch
@@ -85,6 +75,30 @@ namespace Meadow.Modbus
             }
 
             // Unlike RTU, Modbus TCP doesn't do a CRC - it relies on TCP/IP to do error checking
+
+            return message;
+        }
+
+        protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, ushort registerCount)
+        {
+            var message = new byte[12];
+
+            message[0] = 0; // these first 2 bytes can be an "ID" but it's unique to TCP and I've never seen it used, so omitting for now
+            message[1] = modbusAddress;
+            message[2] = 0;
+            message[3] = 0;
+
+            message[4] = 0; // fixed size for a read - no need to calculate
+            message[5] = 6;
+
+            message[6] = modbusAddress;
+            message[7] = (byte)function;
+
+            message[8] = (byte)(startRegister >> 8);
+            message[9] = (byte)(startRegister & 0xff);
+
+            message[10] = (byte)(registerCount >> 8);
+            message[11] = (byte)(registerCount & 0xff);
 
             return message;
         }
