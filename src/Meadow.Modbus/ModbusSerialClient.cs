@@ -47,7 +47,7 @@ namespace Meadow.Modbus
             return message;
 
         }
-        protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[]? data)
+        protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
         {
             var message = new byte[4 + data.Length + 2]; // header + data + crc
 

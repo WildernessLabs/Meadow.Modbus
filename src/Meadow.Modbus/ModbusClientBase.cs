@@ -40,7 +40,7 @@ namespace Meadow.Modbus
         public void WriteHoldingRegister(byte modbusAddress, ushort register, ushort value)
         {
             // swap endianness, because Modbus
-            var data = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(value));
+            var data = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)value));
             var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteRegister, register, data);
             DeliverMessage(message);
             var result = ReadResult();
