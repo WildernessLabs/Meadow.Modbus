@@ -5,22 +5,24 @@ namespace Meadow.Modbus
 {
     public class ModbusSerialClient : ModbusClientBase
     {
-        private ISerialPort m_port;
+        private const int HEADER_DATA_OFFSET = 4;
+
+        private ISerialPort _port;
 
         public ModbusSerialClient(ISerialPort port)
         {
-            m_port = port;
+            _port = port;
         }
 
         public override void Connect()
         {
-            m_port.Open();
+            _port.Open();
             IsConnected = true;
         }
 
         public override void Disconnect()
         {
-            m_port?.Close();
+            _port?.Close();
             IsConnected = false;
         }
 
@@ -33,7 +35,7 @@ namespace Meadow.Modbus
             message[2] = (byte)(register >> 8);
             message[3] = (byte)(register & 0xff);
 
-            Array.Copy(data, 0, message, 4, data.Length);
+            Array.Copy(data, 0, message, HEADER_DATA_OFFSET, data.Length);
 
             FillCRC(message);
 
@@ -42,7 +44,7 @@ namespace Meadow.Modbus
 
         protected override void DeliverMessage(byte[] message)
         {
-            m_port.Write(message);
+            _port.Write(message);
         }
 
         private void FillCRC(byte[] message)
