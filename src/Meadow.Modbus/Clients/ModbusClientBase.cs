@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
@@ -11,12 +12,12 @@ namespace Meadow.Modbus
         private bool m_connected;
 
         protected abstract byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data);
-        protected abstract byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, ushort registerCount);
+        protected abstract byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount);
 
-        protected abstract void DeliverMessage(byte[] message);
-        protected abstract byte[] ReadResult();
+        protected abstract Task DeliverMessage(byte[] message);
+        protected abstract Task<byte[]> ReadResult(ModbusFunction function, int expectedBytes);
 
-        public abstract void Connect();
+        public abstract Task Connect();
         public abstract void Disconnect();
 
         public bool IsConnected
@@ -37,22 +38,27 @@ namespace Meadow.Modbus
             }
         }
 
-        public void WriteHoldingRegister(byte modbusAddress, ushort register, ushort value)
+        public async Task WriteHoldingRegister(byte modbusAddress, ushort register, ushort value)
         {
             // swap endianness, because Modbus
             var data = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)value));
             var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteRegister, register, data);
-            DeliverMessage(message);
-            var result = ReadResult();
+            await DeliverMessage(message);
+            await ReadResult(ModbusFunction.WriteRegister, 12);
         }
 
-        public ushort[] ReadHoldingRegisters(byte modbusAddress, ushort startRegister, ushort registerCount)
+        public async Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount)
         {
             var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
-            DeliverMessage(message);
-            var result = ReadResult();
+            await DeliverMessage(message);
+            var result = await ReadResult(ModbusFunction.ReadHoldingRegister, 9 + 2 * registerCount);
 
-            return null;
+            var registers = new ushort[registerCount];
+            for (var i = 0; i < registerCount; i++)
+            {
+                registers[i] = (ushort)((result[i * 2] << 8) | (result[i * 2 + 1]));
+            }
+            return registers;
         }
     }
 }

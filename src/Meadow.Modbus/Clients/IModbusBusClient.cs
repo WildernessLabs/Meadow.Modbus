@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
@@ -9,7 +10,7 @@ namespace Meadow.Modbus
 
         public bool IsConnected { get; }
 
-        void Connect();
+        Task Connect();
         void Disconnect();
 
         /// <summary>
@@ -18,7 +19,7 @@ namespace Meadow.Modbus
         /// <param name="modbusAddress"></param>
         /// <param name="register"></param>
         /// <param name="value"></param>
-        void WriteHoldingRegister(byte modbusAddress, ushort register, ushort value);
+        Task WriteHoldingRegister(byte modbusAddress, ushort register, ushort value);
 
         /// <summary>
         /// Reads the requested number of holding registers from a device
@@ -27,6 +28,6 @@ namespace Meadow.Modbus
         /// <param name="startRegister"></param>
         /// <param name="registerCount"></param>
         /// <returns></returns>
-        ushort[] ReadHoldingRegisters(byte modbusAddress, ushort startRegister, ushort registerCount);
+        Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Meadow.Hardware;
 using System;
+using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
@@ -14,10 +15,11 @@ namespace Meadow.Modbus
             _port = port;
         }
 
-        public override void Connect()
+        public override Task Connect()
         {
             _port.Open();
             IsConnected = true;
+            return Task.CompletedTask;
         }
 
         public override void Disconnect()
@@ -26,13 +28,15 @@ namespace Meadow.Modbus
             IsConnected = false;
         }
 
-        protected override byte[] ReadResult()
+        protected override async Task<byte[]> ReadResult(ModbusFunction function, int expectedBytes)
         {
             return null;
         }
 
-        protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, ushort registerCount)
+        protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
         {
+            if (registerCount > ushort.MaxValue) throw new ArgumentException();
+
             var message = new byte[8]; // fn 3 is always 8 bytes
 
             message[0] = modbusAddress;
@@ -63,9 +67,10 @@ namespace Meadow.Modbus
             return message;
         }
 
-        protected override void DeliverMessage(byte[] message)
+        protected override Task DeliverMessage(byte[] message)
         {
             _port.Write(message);
+            return Task.CompletedTask;
         }
 
         private void FillCRC(byte[] message)
