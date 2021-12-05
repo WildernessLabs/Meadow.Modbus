@@ -49,6 +49,8 @@ namespace Meadow.Modbus
 
         public async Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount)
         {
+            if (registerCount > 125) throw new ArgumentException("A maximum of 125 registers can be retrieved at one time");
+
             var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
             await DeliverMessage(message);
             var result = await ReadResult(ModbusFunction.ReadHoldingRegister, 9 + 2 * registerCount);

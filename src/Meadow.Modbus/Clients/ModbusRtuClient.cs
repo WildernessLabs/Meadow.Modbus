@@ -4,13 +4,13 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
-    public class ModbusSerialClient : ModbusClientBase
+    public class ModbusRtuClient : ModbusClientBase
     {
         private const int HEADER_DATA_OFFSET = 4;
 
         private ISerialPort _port;
 
-        public ModbusSerialClient(ISerialPort port)
+        public ModbusRtuClient(ISerialPort port)
         {
             _port = port;
         }
@@ -30,7 +30,45 @@ namespace Meadow.Modbus
 
         protected override async Task<byte[]> ReadResult(ModbusFunction function, int expectedBytes)
         {
-            return null;
+            // the response must be at least 5 bytes, so wait for at least that much to come in
+            var t = 0;
+            while(_port.BytesToRead < 5)
+            {
+                await Task.Delay(10);
+                t += 10;
+                if (t > _port.ReadTimeout) throw new TimeoutException();
+            }
+
+            var buffer = new byte[_port.BytesToRead];
+            _port.Read(buffer, 0, buffer.Length);
+
+            // do a CRC on all but the last 2 bytes, then see if that matches the last 2
+            var expectedCrc = Crc(buffer, 0, buffer.Length - 2);
+            var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
+            if (expectedCrc != actualCrc) throw new Exception("CRC Failure");
+
+            // TODO: verify there?
+            // buffer[0] == modbus address
+            // buffer[1] == called function
+            // buffer[2] == data length
+
+            if (function != (ModbusFunction)buffer[1])
+            {
+                // TODO: should we care?
+            }
+
+            var result = new byte[buffer[2]];
+            Array.Copy(buffer, 3, result, 0, result.Length);
+
+            return await Task.FromResult(buffer);
+        }
+
+        protected override Task DeliverMessage(byte[] message)
+        {
+            return Task.Run(() =>
+            {
+                _port.Write(message);
+            });
         }
 
         protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
@@ -67,20 +105,14 @@ namespace Meadow.Modbus
             return message;
         }
 
-        protected override Task DeliverMessage(byte[] message)
-        {
-            _port.Write(message);
-            return Task.CompletedTask;
-        }
-
-        private void FillCRC(byte[] message)
+        private ushort Crc(byte[] data, int index, int count)
         {
             ushort crc = 0xFFFF;
             char lsb;
 
-            for (int i = 0; i < (message.Length) - 2; i++)
+            for (int i = index; i < count; i++)
             {
-                crc = (ushort)(crc ^ message[i]);
+                crc = (ushort)(crc ^ data[i]);
 
                 for (int j = 0; j < 8; j++)
                 {
@@ -91,6 +123,13 @@ namespace Meadow.Modbus
                         crc = (ushort)(crc ^ 0xa001);
                 }
             }
+
+            return crc;
+        }
+
+        private void FillCRC(byte[] message)
+        {
+            var crc = Crc(message, 0, message.Length - 2);
 
             // fill in the CRC (last 2 bytes) - big-endian
             message[message.Length - 1] = (byte)((crc >> 8) & 0xff);

@@ -8,7 +8,7 @@ namespace Meadow.Modbus.Unit.Tests
         public void TestFunction3Generation()
         {
             var port = new MockSerialPort();
-            var client = new ModbusSerialClient(port);
+            var client = new ModbusRtuClient(port);
 
             client.ReadHoldingRegisters(7, 11, 13);
 
@@ -22,7 +22,7 @@ namespace Meadow.Modbus.Unit.Tests
         public void TestFunction6Generation()
         {
             var port = new MockSerialPort();
-            var client = new ModbusSerialClient(port);
+            var client = new ModbusRtuClient(port);
 
             client.WriteHoldingRegister(1, 7, 42);
 
