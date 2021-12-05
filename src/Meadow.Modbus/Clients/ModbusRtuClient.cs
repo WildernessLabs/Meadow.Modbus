@@ -60,7 +60,7 @@ namespace Meadow.Modbus
             var result = new byte[buffer[2]];
             Array.Copy(buffer, 3, result, 0, result.Length);
 
-            return await Task.FromResult(buffer);
+            return await Task.FromResult(result);
         }
 
         protected override Task DeliverMessage(byte[] message)
