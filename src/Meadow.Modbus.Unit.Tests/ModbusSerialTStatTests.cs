@@ -47,7 +47,7 @@ namespace Meadow.Modbus.Unit.Tests
 
                 // TODO: verify it's reasonable?
 
-                // add or subtract some randome amount
+                // add or subtract some random amount
                 var r = new Random();
                 var delta = r.Next(-20, 20);
                 var newSetpoint = (ushort)(setpoint[0] + delta);

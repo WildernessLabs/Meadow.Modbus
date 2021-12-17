@@ -9,15 +9,31 @@ namespace Meadow.Modbus
         private const int HEADER_DATA_OFFSET = 4;
 
         private ISerialPort _port;
+        private IDigitalOutputPort? _enable;
 
-        public ModbusRtuClient(ISerialPort port)
+        public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort)
         {
             _port = port;
+            _enable = enablePort;
+        }
+
+        private void SetEnable(bool state)
+        {
+            if (_enable != null)
+            {
+                Console.WriteLine($"{(state ? "ON" : "OFF")}");
+                _enable.State = state;
+            }
         }
 
         public override Task Connect()
         {
-            _port.Open();
+            SetEnable(false);
+
+            if (!_port.IsOpen)
+            {
+                _port.Open();
+            }
             IsConnected = true;
             return Task.CompletedTask;
         }
@@ -65,9 +81,12 @@ namespace Meadow.Modbus
 
         protected override Task DeliverMessage(byte[] message)
         {
-            return Task.Run(() =>
+            return Task.Run(async () =>
             {
+                SetEnable(true);
+                await Task.Delay(1);
                 _port.Write(message);
+                SetEnable(false);
             });
         }
 
