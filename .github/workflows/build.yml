@@ -3,9 +3,9 @@ name: Build Modbus
 on:
   workflow_dispatch:
   push:
-    branches: [ develop ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ develop ]
+    branches: [ main, develop ]
 
 jobs:
   build:
