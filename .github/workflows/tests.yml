@@ -1,0 +1,23 @@
+name: Modbus Unit Tests
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.x
+    - name: Restore dependencies
+      run: dotnet restore Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln
+    - name: Unit Tests
+      run: dotnet test -c Release  Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln --no-restore --verbosity normal
