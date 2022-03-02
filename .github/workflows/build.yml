@@ -22,5 +22,3 @@ jobs:
       run: dotnet restore Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln
     - name: Build
       run: dotnet build -c Release Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln --no-restore
-    - name: Unit Tests
-      run: dotnet test -c Release  Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln --no-restore --verbosity normal
