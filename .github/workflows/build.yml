@@ -1,10 +1,11 @@
-name: Build for .NET 5
+name: Build Modbus
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ develop ]
 
 jobs:
   build:
@@ -16,10 +17,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.x
+        dotnet-version: 6.0.x
     - name: Restore dependencies
-      run: dotnet restore src/Meadow.Modbus.sln
+      run: dotnet restore Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln
     - name: Build
-      run: dotnet build -c Release src/Meadow.Modbus.sln --no-restore
+      run: dotnet build -c Release Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln --no-restore
     - name: Unit Tests
-      run: dotnet test -c Release src/Meadow.Modbus.sln --no-restore --verbosity normal
+      run: dotnet test -c Release  Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln --no-restore --verbosity normal

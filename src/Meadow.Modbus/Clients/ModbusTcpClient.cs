@@ -14,7 +14,7 @@ namespace Meadow.Modbus
 
         private readonly TcpClient _client;
         private ushort _transaction = 0;
-        private bool _disposed;
+        private byte[] _responseBuffer = new byte[300]; // I think the max is 9 + 255, but this gives a little room
 
         public ModbusTcpClient(string destinationAddress, short port = DefaultModbusTCPPort)
             : this(IPAddress.Parse(destinationAddress), port)
@@ -28,24 +28,9 @@ namespace Meadow.Modbus
             _client = new TcpClient();
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected override void DisposeManagedResources()
         {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _client.Dispose();
-                }
-
-                _disposed = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            _client?.Dispose();
         }
 
         public override async Task Connect()
@@ -155,30 +140,41 @@ namespace Meadow.Modbus
 
         }
 
-        protected override async Task<byte[]> ReadResult(ModbusFunction function, int expectedBytes)
+        protected override async Task<byte[]> ReadResult(ModbusFunction function)
         {
-//            var expectedLength = 7 + 1 + 1 + (readCount * 2);
+            if (Destination.Equals(IPAddress.None))
+            {
+                // this is used in testing, nothing gets sent
+                switch(function)
+                {
+                    case ModbusFunction.ReadHoldingRegister:
+                        return new byte[125];
+                    default:
+                        return new byte[0];
+                }
+            }
 
             // responses (even an error) are at least 9 bytes - read enough to know the status
-            var responseBuffer = new byte[expectedBytes];
-            var count = await _client.GetStream().ReadAsync(responseBuffer, 0, responseBuffer.Length);
+            Array.Clear(_responseBuffer, 0, _responseBuffer.Length);
+            var count = await _client.GetStream().ReadAsync(_responseBuffer, 0, 9);
 
-            if ((responseBuffer[7] & 0x80) != 0)
+            // TODO: we assume we get 9 bytes back here - handle that *not* happening
+
+            if ((_responseBuffer[7] & 0x80) != 0)
             {
                 // we have an error
-                var reason = (ModbusErrorCode)responseBuffer[8];
+                var reason = (ModbusErrorCode)_responseBuffer[8];
                 throw new ModbusException(reason, function);
             }
 
-            if ((count - 9) != responseBuffer[8])
-            {
-                // TODO: we need to read more data
-                throw new Exception("Continued read not implemented");
-            }
+            // read any remaining payload
+            count = await _client.GetStream().ReadAsync(_responseBuffer, 9, _responseBuffer[8]);
+
+            // TODO: if count < the expected, we need to keep reading
 
             // if it's not an error, responseBuffer[8] is the payload length (as a byte)
-            var result = new byte[responseBuffer[8]];
-            Array.Copy(responseBuffer, 9, result, 0, result.Length);
+            var result = new byte[_responseBuffer[8]];
+            Array.Copy(_responseBuffer, 9, result, 0, result.Length);
             return result;
         }
     }

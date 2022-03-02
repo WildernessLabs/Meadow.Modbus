@@ -4,6 +4,14 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
+    public class CrcException : Exception 
+    {
+        internal CrcException()
+            : base("CRC Failure")
+        {
+        }
+    }
+
     public class ModbusRtuClient : ModbusClientBase
     {
         private const int HEADER_DATA_OFFSET = 4;
@@ -11,17 +19,23 @@ namespace Meadow.Modbus
         private ISerialPort _port;
         private IDigitalOutputPort? _enable;
 
-        public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort)
+        public string PortName => _port.PortName; 
+
+        public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
         {
             _port = port;
             _enable = enablePort;
+        }
+
+        protected override void DisposeManagedResources()
+        {
+            _port?.Dispose();
         }
 
         private void SetEnable(bool state)
         {
             if (_enable != null)
             {
-                Console.WriteLine($"{(state ? "ON" : "OFF")}");
                 _enable.State = state;
             }
         }
@@ -33,7 +47,9 @@ namespace Meadow.Modbus
             if (!_port.IsOpen)
             {
                 _port.Open();
+                _port.ClearReceiveBuffer();
             }
+
             IsConnected = true;
             return Task.CompletedTask;
         }
@@ -44,34 +60,61 @@ namespace Meadow.Modbus
             IsConnected = false;
         }
 
-        protected override async Task<byte[]> ReadResult(ModbusFunction function, int expectedBytes)
+        protected override async Task<byte[]> ReadResult(ModbusFunction function)
         {
             // the response must be at least 5 bytes, so wait for at least that much to come in
             var t = 0;
-            while(_port.BytesToRead < 5)
+            while (_port.BytesToRead < 5)
             {
                 await Task.Delay(10);
                 t += 10;
-                if (t > _port.ReadTimeout) throw new TimeoutException();
+                if (_port.ReadTimeout.TotalMilliseconds > 0 && t > _port.ReadTimeout.TotalMilliseconds) throw new TimeoutException();
             }
 
-            var buffer = new byte[_port.BytesToRead];
-            _port.Read(buffer, 0, buffer.Length);
+            var header = new byte[3];
+
+            // read 5 bytes so we can get the length
+            _port.Read(header, 0, header.Length);
+
+            // TODO: verify these?
+            // header[0] == modbus address
+            // header[1] == called function
+            // header[2] == data length
+
+            //            if (function != (ModbusFunction)header[1])
+            //            {
+            // TODO: should we care?
+            //            }
+
+            int dataLength;
+
+            switch (function)
+            {
+                case ModbusFunction.WriteRegister:
+                    dataLength = 7;
+                    break;
+                case ModbusFunction.ReadHoldingRegister:
+                    dataLength = 5;
+                    break;
+                default:
+                    dataLength = 5;
+                    break;
+            }
+            var buffer = new byte[header[2] + dataLength]; // header + length + CRC
+
+            // the CRC includes the header, so we need those in the buffer
+            Array.Copy(header, buffer, 3);
+
+            var read = 3;
+            while (read < buffer.Length)
+            {
+                read += _port.Read(buffer, read, buffer.Length - read);
+            }
 
             // do a CRC on all but the last 2 bytes, then see if that matches the last 2
             var expectedCrc = Crc(buffer, 0, buffer.Length - 2);
             var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
-            if (expectedCrc != actualCrc) throw new Exception("CRC Failure");
-
-            // TODO: verify there?
-            // buffer[0] == modbus address
-            // buffer[1] == called function
-            // buffer[2] == data length
-
-            if (function != (ModbusFunction)buffer[1])
-            {
-                // TODO: should we care?
-            }
+            if (expectedCrc != actualCrc) throw new CrcException();
 
             var result = new byte[buffer[2]];
             Array.Copy(buffer, 3, result, 0, result.Length);
@@ -79,15 +122,12 @@ namespace Meadow.Modbus
             return await Task.FromResult(result);
         }
 
-        protected override Task DeliverMessage(byte[] message)
+        protected override async Task DeliverMessage(byte[] message)
         {
-            return Task.Run(async () =>
-            {
-                SetEnable(true);
-                await Task.Delay(1);
-                _port.Write(message);
-                SetEnable(false);
-            });
+            SetEnable(true);
+            _port.Write(message);
+            await Task.Delay(1); // without this delay, the CRC is unreliable. I suspect we're disabling before the destination has fully processed.  I'd love a < 1ms delay, but this is what we have
+            SetEnable(false);
         }
 
         protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
@@ -108,6 +148,7 @@ namespace Meadow.Modbus
             return message;
 
         }
+
         protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
         {
             var message = new byte[4 + data.Length + 2]; // header + data + crc

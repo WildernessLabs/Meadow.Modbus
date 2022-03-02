@@ -23,6 +23,8 @@ namespace Meadow.Modbus
                     WriteRegisterValues = new byte[m_data[5]];
                     Buffer.BlockCopy(m_data, 6, WriteRegisterValues, 0, WriteRegisterValues.Length);
                     break;
+                default: 
+                    throw new NotSupportedException();
             }
         }
 
@@ -37,9 +39,9 @@ namespace Meadow.Modbus
         public bool WriteCoilValue => m_data[3] != 0;
 
         public short WriteCoilCount => m_data[4];
-        public byte[] WriteCoilValues { get; private set; }
+        public byte[]? WriteCoilValues { get; private set; }
 
         public short WriteRegisterCount => m_data[4];
-        public byte[] WriteRegisterValues { get; private set; }
+        public byte[]? WriteRegisterValues { get; private set; }
     }
 }

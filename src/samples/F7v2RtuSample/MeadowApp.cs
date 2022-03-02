@@ -23,11 +23,11 @@ namespace F7v2RtuSample
             Console.WriteLine("Initialize hardware...");
 
             var port = Device.CreateSerialPort(Device.SerialPortNames.Com4, 19200, 8, Meadow.Hardware.Parity.None, Meadow.Hardware.StopBits.One);
-            port.WriteTimeout = port.ReadTimeout = 5000; // TimeSpan.FromSeconds(5);
+            port.WriteTimeout = port.ReadTimeout = TimeSpan.FromSeconds(5);
             var enable = Device.CreateDigitalOutputPort(Device.Pins.D02, false);
             return new ModbusRtuClient(port, enable);
         }
-
+        
         private async Task DoReading(IModbusBusClient client)
         {
             try

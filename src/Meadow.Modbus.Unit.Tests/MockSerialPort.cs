@@ -7,29 +7,34 @@ namespace Meadow.Modbus.Unit.Tests
     {
         public int BaudRate { get; set; }
 
-        public int BytesToRead => throw new NotImplementedException();
+        public int BytesToRead => ReceiveBuffer?.Length ?? 0;
 
-        public int DataBits => throw new NotImplementedException();
+        public int DataBits => 8;
 
         public bool IsOpen { get; private set; }
 
-        public Parity Parity => throw new NotImplementedException();
+        public Parity Parity => Parity.None;
 
-        public string PortName => throw new NotImplementedException();
+        public string PortName => "SIM";
 
         public int ReceiveBufferSize => throw new NotImplementedException();
 
-        public int ReadTimeout { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public int WriteTimeout { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public TimeSpan ReadTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
+        public TimeSpan WriteTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
 
-        public StopBits StopBits => throw new NotImplementedException();
+        public StopBits StopBits => StopBits.One;
 
         public event SerialDataReceivedEventHandler DataReceived;
         public event EventHandler BufferOverrun;
 
         public byte[]? OutputBuffer { get; set; }
+        public byte[]? ReceiveBuffer { get; set; }
 
         public void ClearReceiveBuffer()
+        {
+        }
+
+        public void Dispose()
         {
         }
 

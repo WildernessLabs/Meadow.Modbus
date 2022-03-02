@@ -35,16 +35,16 @@ namespace Meadow.Modbus
             set => _port.BaudRate = value;
         }
 
-        public int ReadTimeout
+        public TimeSpan ReadTimeout
         {
-            get => _port.ReadTimeout;
-            set => _port.ReadTimeout = value;
+            get => TimeSpan.FromMilliseconds(_port.ReadTimeout);
+            set => _port.ReadTimeout = (int)value.TotalMilliseconds;
         }
 
-        public int WriteTimeout
+        public TimeSpan WriteTimeout
         {
-            get => _port.WriteTimeout;
-            set => _port.WriteTimeout = value;
+            get => TimeSpan.FromMilliseconds(_port.WriteTimeout);
+            set => _port.WriteTimeout = (int)value.TotalMilliseconds;
         }
 
         public void ClearReceiveBuffer()

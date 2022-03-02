@@ -29,5 +29,8 @@ namespace Meadow.Modbus
         /// <param name="registerCount"></param>
         /// <returns></returns>
         Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount);
+
+        Task WriteCoil(byte modbusAddress, ushort register, bool value);
+        Task<bool[]> ReadCoils(byte modbusAddress, ushort startCoil, int coilCount);
     }
 }

@@ -79,10 +79,18 @@ namespace Meadow.Modbus
                     Debug.Write("Waiting for a connection... ");
 
                     // Perform a blocking call to accept requests.
-                    var client = await _server.AcceptTcpClientAsync();
+                    if (_server != null)
+                    {
+                        var client = await _server.AcceptTcpClientAsync();
 
-                    // handle requests on their own tasks
-                    _ = Task.Factory.StartNew(() => ClientHandlerProc(client));
+                        // handle requests on their own tasks
+                        _ = Task.Factory.StartNew(() => ClientHandlerProc(client));
+                    }
+                    else
+                    {
+                        // unsure how this would ever happen, but preventing a compiler warning
+                        Debug.Write("Server is null... ");
+                    }
                 }
 
                 _server?.Stop();
@@ -187,7 +195,7 @@ namespace Meadow.Modbus
             client.Dispose();
         }
 
-        private IModbusResult ProcessMessage(RawMessage message)
+        private IModbusResult? ProcessMessage(RawMessage message)
         {
             switch (message.Function)
             {
@@ -196,36 +204,40 @@ namespace Meadow.Modbus
                     {
                         return ReadCoilRequest(message.ReadStart, message.ReadLength);
                     }
-                    break;
+                    return null;
                 case ModbusFunction.ReadDiscrete:
                     if (ReadDiscreteRequest != null)
                     {
                         return ReadDiscreteRequest(message.ReadStart, message.ReadLength);
                     }
-                    break;
+                    return null;
                 case ModbusFunction.ReadHoldingRegister:
                     if (ReadHoldingRegisterRequest != null)
                     {
                         return ReadHoldingRegisterRequest(message.ReadStart, message.ReadLength);
                     }
-                    break;
+                    return null;
                 case ModbusFunction.ReadInputRegister:
                     if (ReadInputRegisterRequest != null)
                     {
                         return ReadInputRegisterRequest(message.ReadStart, message.ReadLength);
                     }
-                    break;
+                    return null;
                 case ModbusFunction.WriteCoil:
                     if (WriteCoilRequest != null)
                     {
                         // incoming data is always 2 bytes, either 0x0000 or 0xffff
                         return WriteCoilRequest(message.WriteCoilAddress, new bool[] { message.WriteCoilValue });
                     }
-                    break;
+                    return null;
                 case ModbusFunction.WriteRegister:
-                    return WriteRegisterRequest(message.WriteRegisterAddress, new ushort[] { message.WriteRegisterValue });
+                    if (WriteRegisterRequest != null)
+                    {
+                        return WriteRegisterRequest.Invoke(message.WriteRegisterAddress, new ushort[] { message.WriteRegisterValue });
+                    }
+                    return null;
                 case ModbusFunction.WriteMultipleCoils:
-                    if (WriteCoilRequest != null)
+                    if (WriteCoilRequest != null && message.WriteCoilValues != null)
                     {
                         var index = 0;
                         var bit = 0;
@@ -244,7 +256,7 @@ namespace Meadow.Modbus
 
                         return WriteCoilRequest(message.WriteCoilAddress, data);
                     }
-                    break;
+                    return null;
                 case ModbusFunction.WriteMultipleRegisters:
                     if (WriteRegisterRequest != null)
                     {
@@ -260,7 +272,7 @@ namespace Meadow.Modbus
 
                         return WriteRegisterRequest(message.WriteRegisterAddress, data);
                     }
-                    break;
+                    return null;
             }
 
             throw new ModbusException(ModbusErrorCode.IllegalFunction, message.Function);
