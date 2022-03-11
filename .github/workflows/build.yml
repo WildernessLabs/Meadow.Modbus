@@ -19,6 +19,6 @@ jobs:
       with:
         dotnet-version: 6.0.x
     - name: Restore dependencies
-      run: dotnet restore Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln
+      run: dotnet restore src/Meadow.Modbus.sln
     - name: Build
-      run: dotnet build -c Release Source/Meadow.Foundation.Libraries_and_Frameworks/Modbus/Meadow.Modbus.sln --no-restore
+      run: dotnet build -c Release src/Meadow.Modbus.sln --no-restore
