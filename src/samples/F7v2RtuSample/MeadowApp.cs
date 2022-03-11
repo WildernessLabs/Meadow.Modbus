@@ -1,10 +1,7 @@
 ﻿using Meadow;
 using Meadow.Devices;
-using Meadow.Foundation;
-using Meadow.Foundation.Leds;
 using Meadow.Modbus;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace F7v2RtuSample
@@ -24,7 +21,7 @@ namespace F7v2RtuSample
 
             var port = Device.CreateSerialPort(Device.SerialPortNames.Com4, 19200, 8, Meadow.Hardware.Parity.None, Meadow.Hardware.StopBits.One);
             port.WriteTimeout = port.ReadTimeout = TimeSpan.FromSeconds(5);
-            var enable = Device.CreateDigitalOutputPort(Device.Pins.D02, false);
+            var enable = Device.CreateDigitalOutputPort(Device.Pins.D09, false); // enable is D09 on HACK board
             return new ModbusRtuClient(port, enable);
         }
         
@@ -37,11 +34,25 @@ namespace F7v2RtuSample
                 ushort setPointRegister = 345; // occupied setpoint, in tenths of a degree
                 ushort tempRegister = 121; // current temp, in tenths of a degree
 
-                Console.WriteLine($"Reading thermostat holding registers...");
+                var read = false;
+                ushort[] registers = null;
 
-                var registers = await client.ReadHoldingRegisters(address, setPointRegister, 1);
+                do
+                {
+                    Console.WriteLine($"Reading thermostat holding registers...");
 
-                Console.WriteLine($"Current set point: {registers[0] / 10f}");
+                    try
+                    {
+                        registers = await client.ReadHoldingRegisters(address, setPointRegister, 1);
+                        Console.WriteLine($"Current set point: {registers[0] / 10f}");
+                        read = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Reading failed: {ex.Message}");
+                        await Task.Delay(1000);
+                    }
+                } while(!read);
 
                 var r = new Random();
                 var delta = r.Next(-20, 20);
