@@ -8,9 +8,8 @@ namespace Meadow.Modbus.Unit.Tests
     public class ModbusSerialTStatTests
     {
         // this class assumes a connected serial Temco Controls TSTAT7 or TSTAT8
-        /*
-        [Fact]
-        public async void ReadHoldingRegisterTest()
+        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
+        public async void MultipleReadHoldingRegisterTest()
         {
             using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
             {
@@ -34,8 +33,8 @@ namespace Meadow.Modbus.Unit.Tests
             }
         }
 
-        [Fact]
-        public async void WriteHoldingRegisterTest()
+        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
+        public async void MultipleWriteHoldingRegisterTest()
         {
             using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
             {
@@ -59,7 +58,7 @@ namespace Meadow.Modbus.Unit.Tests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
         public async void OverlappingAccessTest()
         {
             using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
@@ -109,12 +108,12 @@ namespace Meadow.Modbus.Unit.Tests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
         public async void ReadHoldingRegisterTest()
         {
             using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
             {
-                port.ReadTimeout = 15000;
+                port.ReadTimeout = TimeSpan.FromSeconds(15);
                 port.Open();
 
                 byte address = 201;
@@ -133,12 +132,12 @@ namespace Meadow.Modbus.Unit.Tests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
         public async void ReadWriteHoldingRegisterTest()
         {
             using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
             {
-                port.ReadTimeout = 15000;
+                port.ReadTimeout = TimeSpan.FromSeconds(15);
                 port.Open();
 
                 byte address = 201;
@@ -161,6 +160,5 @@ namespace Meadow.Modbus.Unit.Tests
                 Assert.Equal(newSetpoint, verifySetpoint[0]);
             }
         }
-        */
     }
 }
