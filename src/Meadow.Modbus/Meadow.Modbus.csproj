@@ -1,11 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
+    <Company>Wilderness Labs, Inc</Company>
+    <PackageProjectUrl>http://beta-developer.wildernesslabs.co/Meadow/</PackageProjectUrl>
+    <PackageId>Meadow.Modbus</PackageId>
+    <PackageIcon>icon.png</PackageIcon>
+    <RepositoryUrl>https://github.com/WildernessLabs/Meadow.Modbus</RepositoryUrl>
+    <PackageTags>Meadow, Modbus</PackageTags>
+    <Description>Wilderness Labs .NET Library supporting Modbus RTU Client, Modbus TCP Client and Modbus TCP server.</Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="" />
     <PackageReference Include="System.IO.Ports" Version="6.0.0" />
     <PackageReference Include="Meadow.Logging" Version="0.*" />
     <PackageReference Include="Meadow.Contracts" Version="0.*" />
