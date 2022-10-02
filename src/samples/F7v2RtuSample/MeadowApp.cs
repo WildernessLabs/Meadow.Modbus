@@ -1,12 +1,11 @@
-﻿using Meadow;
-using Meadow.Devices;
+﻿using Meadow.Devices;
 using Meadow.Modbus;
 using System;
 using System.Threading.Tasks;
 
 namespace F7v2RtuSample
 {
-    public class MeadowApp : App<F7MicroV2, MeadowApp>
+    public class MeadowApp : Meadow.App<F7FeatherV2, MeadowApp>
     {
         public MeadowApp()
         {
@@ -24,7 +23,7 @@ namespace F7v2RtuSample
             var enable = Device.CreateDigitalOutputPort(Device.Pins.D09, false); // enable is D09 on HACK board
             return new ModbusRtuClient(port, enable);
         }
-        
+
         private async Task DoReading(IModbusBusClient client)
         {
             try
@@ -52,7 +51,7 @@ namespace F7v2RtuSample
                         Console.WriteLine($"Reading failed: {ex.Message}");
                         await Task.Delay(1000);
                     }
-                } while(!read);
+                } while (!read);
 
                 var r = new Random();
                 var delta = r.Next(-20, 20);
