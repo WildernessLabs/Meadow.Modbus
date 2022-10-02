@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
 namespace Meadow.Modbus
@@ -61,7 +62,7 @@ namespace Meadow.Modbus
 
         public void Stop()
         {
-            if(IsRunning)
+            if (IsRunning)
             {
                 _signalStop = true;
             }
@@ -119,80 +120,91 @@ namespace Meadow.Modbus
             var bufferOffset = 0;
             var validDataLength = 0;
 
-            while ((i = stream.Read(rxBufferBytes, bufferOffset, rxBufferBytes.Length)) != 0)
+            try
             {
-                // the modbus header is a minimum of 7 bytes, so if it's less we need to keep waiting
-                validDataLength += i;
-
-                if (i < ModbusTcpHeader.Length)
+                while ((i = stream.Read(rxBufferBytes, bufferOffset, rxBufferBytes.Length)) != 0)
                 {
-                    bufferOffset += i;
-                }
-                else
-                {
-                    // the header is in network host order (i.e. big-endian) so we need to do some swapping of stuff to read it
-                    var header = new ModbusTcpHeader(rxBufferBytes, bufferOffset);
+                    // the modbus header is a minimum of 7 bytes, so if it's less we need to keep waiting
+                    validDataLength += i;
 
-                    // Process the data sent by the client.
-
-                    RawMessage? message;
-                    if (header.DataLength > validDataLength)
+                    if (i < ModbusTcpHeader.Length)
                     {
-                        // we need to read more data from the wire
-                        // TODO: add handling for this
-                        throw new Exception("Data starved.");
+                        bufferOffset += i;
                     }
                     else
                     {
-                        message = new RawMessage(rxBufferBytes, 0 + ModbusTcpHeader.Length, validDataLength - ModbusTcpHeader.Length);
-                    }
+                        // the header is in network host order (i.e. big-endian) so we need to do some swapping of stuff to read it
+                        var header = new ModbusTcpHeader(rxBufferBytes, bufferOffset);
 
-                    var result = ProcessMessage(message);
+                        // Process the data sent by the client.
 
-                    Response? response;
-                    if (result is ModbusErrorResult mer)
-                    {
-                        response = Response.CreateErrorResponse(message.Function, header.TransactionID, header.UnitID, mer.ErrorCode);
-                    }
-                    else if (result is ModbusReadResult mrr)
-                    {
-                        response = Response.CreateReadResponse(message.Function, header.TransactionID, header.UnitID, mrr.Data);
-                    }
-                    else if (result is ModbusWriteResult mwr)
-                    {
-                        switch (message.Function)
+                        RawMessage? message;
+                        if (header.DataLength > validDataLength)
                         {
-                            case ModbusFunction.WriteCoil:
-                                response = Response.CreateWriteCoilResponse(message.Function, header.TransactionID, header.UnitID, message.WriteCoilAddress, message.WriteCoilValue);
-                                break;
-                            case ModbusFunction.WriteRegister:
-                                response = Response.CreateWriteRegisterResponse(message.Function, header.TransactionID, header.UnitID, message.WriteRegisterAddress, message.WriteRegisterValue);
-                                break;
-                            default:
-                                response = Response.CreateWriteResponse(message.Function, header.TransactionID, header.UnitID, mwr.ItemsWritten);
-                                break;
+                            // we need to read more data from the wire
+                            // TODO: add handling for this
+                            throw new Exception("Data starved.");
                         }
-                    }
-                    else
-                    {
-                        throw new Exception("Invalid Modbus result");
-                    }
+                        else
+                        {
+                            message = new RawMessage(rxBufferBytes, 0 + ModbusTcpHeader.Length, validDataLength - ModbusTcpHeader.Length);
+                        }
 
-                    if (response != null)
-                    {
-                        // Send back a response.
-                        var data = response.Serialize();
-                        stream.Write(data, 0, data.Length);
-                        Debug.WriteLine($"Modbus Client {clientID}:Sent: {data.Length} bytes");
-                    }
+                        var result = ProcessMessage(message);
 
-                    bufferOffset = 0;
-                    validDataLength = 0;
+                        Response? response;
+                        if (result is ModbusErrorResult mer)
+                        {
+                            response = Response.CreateErrorResponse(message.Function, header.TransactionID, header.UnitID, mer.ErrorCode);
+                        }
+                        else if (result is ModbusReadResult mrr)
+                        {
+                            response = Response.CreateReadResponse(message.Function, header.TransactionID, header.UnitID, mrr.Data);
+                        }
+                        else if (result is ModbusWriteResult mwr)
+                        {
+                            switch (message.Function)
+                            {
+                                case ModbusFunction.WriteCoil:
+                                    response = Response.CreateWriteCoilResponse(message.Function, header.TransactionID, header.UnitID, message.WriteCoilAddress, message.WriteCoilValue);
+                                    break;
+                                case ModbusFunction.WriteRegister:
+                                    response = Response.CreateWriteRegisterResponse(message.Function, header.TransactionID, header.UnitID, message.WriteRegisterAddress, message.WriteRegisterValue);
+                                    break;
+                                default:
+                                    response = Response.CreateWriteResponse(message.Function, header.TransactionID, header.UnitID, mwr.ItemsWritten);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Invalid Modbus result");
+                        }
+                        
+                        if (response != null)
+                        {
+                            // Send back a response.
+                            var data = response.Serialize();
+                            stream.Write(data, 0, data.Length);
+                            Debug.WriteLine($"Modbus Client {clientID}:Sent: {data.Length} bytes");
+                        }
+
+                        bufferOffset = 0;
+                        validDataLength = 0;
+                    }
                 }
             }
-
-            // Shutdown and end connection
-            client.Dispose();
+            catch (System.IO.IOException e)
+            {
+                // client likely disconnected
+                Debug.WriteLine($"Modbus Server threw: {e.Message}");
+                throw;
+            }
+            finally
+            {
+                // Shutdown and end connection
+                client.Dispose();
+            }
         }
 
         private IModbusResult? ProcessMessage(RawMessage message)

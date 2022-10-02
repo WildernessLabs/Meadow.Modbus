@@ -5,6 +5,24 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
+    public static class Extensions
+    {
+        public static int[] ConvertRegistersToInt32(this ushort[] registers)
+        {
+            var values = new int[registers.Length / 2];
+
+            var index = 0;
+            var i = 0;
+            // Need to byte swap
+            for (; i < registers.Length; i += 2, index++)
+            {
+                values[index] = ((registers[i] << 8) | (registers[i] >> 8) | (registers[i + 1] << 8) | (registers[i + 1] >> 8));
+            }
+
+            return values;
+        }
+    }
+
     public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     {
         private const int MaxRegisterReadCount = 125;
@@ -54,7 +72,7 @@ namespace Meadow.Modbus
             GC.SuppressFinalize(this);
         }
 
-        public bool IsConnected
+        public virtual bool IsConnected
         {
             get => _connected;
             protected set
@@ -109,6 +127,40 @@ namespace Meadow.Modbus
             if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
 
             var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
+            await _syncRoot.WaitAsync();
+
+            byte[] result;
+
+            try
+            {
+                await DeliverMessage(message);
+                result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            }
+            finally
+            {
+                _syncRoot.Release();
+            }
+
+            var registers = new ushort[registerCount];
+            for (var i = 0; i < registerCount; i++)
+            {
+                registers[i] = (ushort)((result[i * 2] << 8) | (result[i * 2 + 1]));
+            }
+            return registers;
+        }
+
+        public async Task<ushort[]> ReadInputRegisters(byte modbusAddress, ushort startRegister, int registerCount)
+        {
+            if (startRegister > 30000)
+            {
+                // input registers are defined as starting at 30001, but the actual bus read doesn't use the address, but instead the offset
+                // we'll support th user passing in the definition either way
+                startRegister -= 30001;
+            }
+
+            if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
+
+            var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadInputRegister, startRegister, registerCount);
             await _syncRoot.WaitAsync();
 
             byte[] result;

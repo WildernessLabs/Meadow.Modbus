@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Xunit;
 
 namespace Meadow.Modbus.Unit.Tests
@@ -41,7 +40,7 @@ namespace Meadow.Modbus.Unit.Tests
                 // the event handler above checks the result
                 for (int i = 0; i < 5; i++)
                 {
-                    testRegisterAddress = (ushort)r.Next(ushort.MaxValue);
+                    testRegisterAddress = (ushort)r.Next(40000);
                     testData[0] = (ushort)r.Next(ushort.MaxValue);
                     callbackOccurred = false;
                     await client.WriteHoldingRegister(255, testRegisterAddress, testData[0]);
@@ -80,7 +79,8 @@ namespace Meadow.Modbus.Unit.Tests
                 {
                     callbackOccurred = false;
 
-                    testRegisterAddress = (ushort)r.Next(ushort.MaxValue);
+                    testRegisterAddress = (ushort)r.Next(40000); // holding register addresses must be < 40000 (or they get offset)
+
                     var result = await client.ReadHoldingRegisters(255, testRegisterAddress, 1);
                     Assert.Equal(testData[0], result[0]);
 
@@ -106,7 +106,7 @@ namespace Meadow.Modbus.Unit.Tests
 
                     // generate some new random data
                     testData = new ushort[length];
-                    for (int i = 0;i < testData.Length;i++)
+                    for (int i = 0; i < testData.Length; i++)
                     {
                         testData[i] = (ushort)r.Next(ushort.MaxValue);
                     }
@@ -131,7 +131,7 @@ namespace Meadow.Modbus.Unit.Tests
                     Assert.NotNull(testData);
                     Assert.Equal(testData.Length, result.Length);
 
-                    for(int reg = 0; reg < testData.Length; reg++)
+                    for (int reg = 0; reg < testData.Length; reg++)
                     {
                         Assert.Equal(testData[reg], result[reg]);
                     }

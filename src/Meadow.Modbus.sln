@@ -12,7 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		readme.md = readme.md
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "F7v2RtuSample", "samples\F7v2RtuSample\F7v2RtuSample.csproj", "{A79616E3-8399-4A12-BDC7-1FD52CE286DC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FeatherV2RtuSample", "samples\F7v2RtuSample\FeatherV2RtuSample.csproj", "{A79616E3-8399-4A12-BDC7-1FD52CE286DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
