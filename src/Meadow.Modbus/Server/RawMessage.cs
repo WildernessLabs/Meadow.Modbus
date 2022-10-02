@@ -23,7 +23,12 @@ namespace Meadow.Modbus
                     WriteRegisterValues = new byte[m_data[5]];
                     Buffer.BlockCopy(m_data, 6, WriteRegisterValues, 0, WriteRegisterValues.Length);
                     break;
-                default: 
+                case ModbusFunction.ReadInputRegister:
+                case ModbusFunction.ReadCoil:
+                case ModbusFunction.ReadHoldingRegister:
+                case ModbusFunction.ReadDiscrete:
+                    break;
+                default:
                     throw new NotSupportedException();
             }
         }
