@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace Meadow.Modbus
         public IPAddress Destination { get; }
         public short Port { get; }
 
-        private readonly TcpClient _client;
+        private TcpClient _client;
         private ushort _transaction = 0;
         private byte[] _responseBuffer = new byte[300]; // I think the max is 9 + 255, but this gives a little room
 
@@ -35,7 +36,21 @@ namespace Meadow.Modbus
 
         public override async Task Connect()
         {
-            await _client.ConnectAsync(Destination, Port);
+            try
+            {
+                if (_client == null || _client.Client == null)
+                {
+                    _client = new TcpClient();
+                }
+
+                await _client.ConnectAsync(Destination, Port);
+                IsConnected = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Modbus TCP client cannot connect: {ex.Message}");
+                IsConnected = false;
+            }
         }
 
         public override void Disconnect()
@@ -80,7 +95,7 @@ namespace Meadow.Modbus
 
             Array.Copy(data, 0, message, headerSize, data.Length);
 
-            switch(function)
+            switch (function)
             {
                 case ModbusFunction.WriteMultipleCoils:
                 case ModbusFunction.WriteMultipleRegisters:
@@ -136,7 +151,15 @@ namespace Meadow.Modbus
                 return;
             }
 
-            await _client.GetStream().WriteAsync(message, 0, message.Length);
+            try
+            {
+                await _client.GetStream().WriteAsync(message, 0, message.Length);
+            }
+            catch (Exception ex)
+            {
+                IsConnected = false;
+                _client.Close();
+            }
 
         }
 
@@ -145,7 +168,7 @@ namespace Meadow.Modbus
             if (Destination.Equals(IPAddress.None))
             {
                 // this is used in testing, nothing gets sent
-                switch(function)
+                switch (function)
                 {
                     case ModbusFunction.ReadHoldingRegister:
                         return new byte[125];
@@ -154,8 +177,14 @@ namespace Meadow.Modbus
                 }
             }
 
+            if (!_client.Connected)
+            {
+                throw new System.Net.Sockets.SocketException();
+            }
+
             // responses (even an error) are at least 9 bytes - read enough to know the status
             Array.Clear(_responseBuffer, 0, _responseBuffer.Length);
+
             var count = await _client.GetStream().ReadAsync(_responseBuffer, 0, 9);
 
             // TODO: we assume we get 9 bytes back here - handle that *not* happening
@@ -168,9 +197,17 @@ namespace Meadow.Modbus
             }
 
             // read any remaining payload
-            count = await _client.GetStream().ReadAsync(_responseBuffer, 9, _responseBuffer[8]);
-
-            // TODO: if count < the expected, we need to keep reading
+            try
+            {
+                count = await _client.GetStream().ReadAsync(_responseBuffer, 9, _responseBuffer[8]);
+                // TODO: if count < the expected, we need to keep reading
+            }
+            catch
+            {
+                IsConnected = false;
+                _client.Close();
+                throw;
+            }
 
             // if it's not an error, responseBuffer[8] is the payload length (as a byte)
             var result = new byte[_responseBuffer[8]];
