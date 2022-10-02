@@ -27,6 +27,8 @@ namespace Meadow.Modbus
                 case ModbusFunction.ReadCoil:
                 case ModbusFunction.ReadHoldingRegister:
                 case ModbusFunction.ReadDiscrete:
+                case ModbusFunction.WriteCoil:
+                case ModbusFunction.WriteRegister:
                     break;
                 default:
                     throw new NotSupportedException();
