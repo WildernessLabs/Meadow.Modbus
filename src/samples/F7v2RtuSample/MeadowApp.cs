@@ -1,27 +1,47 @@
-﻿using Meadow.Devices;
+﻿using Meadow;
+using Meadow.Devices;
+using Meadow.Hardware;
 using Meadow.Modbus;
 using System;
 using System.Threading.Tasks;
 
 namespace F7v2RtuSample
 {
-    public class MeadowApp : Meadow.App<F7FeatherV2, MeadowApp>
+    public class MeadowApp : App<F7FeatherV2>
     {
-        public MeadowApp()
-        {
-            var client = Initialize();
-            client.Connect();
-            Task.Run(() => DoReading(client));
-        }
+        private ModbusRtuClient _client;
 
-        IModbusBusClient Initialize()
+        public override Task Initialize()
         {
-            Console.WriteLine("Initialize hardware...");
+            Resolver.Log.Info("Initialize hardware...");
 
             var port = Device.CreateSerialPort(Device.SerialPortNames.Com4, 19200, 8, Meadow.Hardware.Parity.None, Meadow.Hardware.StopBits.One);
             port.WriteTimeout = port.ReadTimeout = TimeSpan.FromSeconds(5);
-            var enable = Device.CreateDigitalOutputPort(Device.Pins.D09, false); // enable is D09 on HACK board
-            return new ModbusRtuClient(port, enable);
+
+            var projLab = new ProjectLab();
+            IDigitalOutputPort serialEnable;
+
+            if (projLab.IsV1Hardware())
+            {
+                Resolver.Log.Info("ProjectLab v1 detected");
+                serialEnable = Device.CreateDigitalOutputPort(Device.Pins.D09, false); // early ProjLab and Hack board
+            }
+            else
+            {
+                Resolver.Log.Info("ProjectLab v2 detected");
+                serialEnable = projLab.Mcp_2.CreateDigitalOutputPort(projLab.Mcp_2.Pins.GP0, false);
+            }
+
+            Resolver.Log.Info("Creating the Modbus RTU Enable port");
+            _client = new ModbusRtuClient(port, serialEnable);
+
+            return Task.CompletedTask;
+        }
+
+        public override Task Run()
+        {
+            _client.Connect();
+            return Task.Run(() => DoReading(_client));
         }
 
         private async Task DoReading(IModbusBusClient client)

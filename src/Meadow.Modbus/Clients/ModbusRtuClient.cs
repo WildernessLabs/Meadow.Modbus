@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
-    public class CrcException : Exception 
+    public class CrcException : Exception
     {
         internal CrcException()
             : base("CRC Failure")
@@ -18,8 +18,9 @@ namespace Meadow.Modbus
 
         private ISerialPort _port;
         private IDigitalOutputPort? _enable;
+        private double _byteTime;
 
-        public string PortName => _port.PortName; 
+        public string PortName => _port.PortName;
 
         public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
         {
@@ -49,6 +50,8 @@ namespace Meadow.Modbus
                 _port.Open();
                 _port.ClearReceiveBuffer();
             }
+
+            _byteTime = (1d / _port.BaudRate) * _port.DataBits * 1000d;
 
             IsConnected = true;
             return Task.CompletedTask;
@@ -126,7 +129,10 @@ namespace Meadow.Modbus
         {
             SetEnable(true);
             _port.Write(message);
-            await Task.Delay(1); // without this delay, the CRC is unreliable. I suspect we're disabling before the destination has fully processed.  I'd love a < 1ms delay, but this is what we have
+            // the above call to the OS transfers data to the serial buffer - it does *not* mean all data has gone out on the wire
+            // we must wait for all data to get transmitted before lowering the enable line
+            var wait = (int)(_byteTime * message.Length) + 1;
+            await Task.Delay(wait);
             SetEnable(false);
         }
 
