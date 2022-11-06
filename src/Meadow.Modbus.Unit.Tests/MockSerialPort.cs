@@ -9,11 +9,11 @@ namespace Meadow.Modbus.Unit.Tests
 
         public int BytesToRead => ReceiveBuffer?.Length ?? 0;
 
-        public int DataBits => 8;
+        public int DataBits { get; set; } = 8;
 
         public bool IsOpen { get; private set; }
 
-        public Parity Parity => Parity.None;
+        public Parity Parity { get; set; } = Parity.None;
 
         public string PortName => "SIM";
 
@@ -22,7 +22,7 @@ namespace Meadow.Modbus.Unit.Tests
         public TimeSpan ReadTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
         public TimeSpan WriteTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
 
-        public StopBits StopBits => StopBits.One;
+        public StopBits StopBits { get; set; } = StopBits.One;
 
         public event SerialDataReceivedEventHandler DataReceived;
         public event EventHandler BufferOverrun;

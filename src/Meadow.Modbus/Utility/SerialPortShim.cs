@@ -11,13 +11,28 @@ namespace Meadow.Modbus
         private System.IO.Ports.SerialPort _port;
         private bool disposedValue;
 
-        public int DataBits => _port.DataBits;
         public bool IsOpen => _port.IsOpen;
-        public Parity Parity => (Parity)_port.Parity;
         public string PortName => _port.PortName;
         public int BytesToRead => _port.BytesToRead;
         public int ReceiveBufferSize => _port.ReadBufferSize;
-        public StopBits StopBits => (StopBits)_port.StopBits - 1;
+
+        public int DataBits
+        {
+            get => _port.DataBits;
+            set => _port.DataBits = value;
+        }
+
+        public Parity Parity
+        {
+            get => (Parity)_port.Parity;
+            set => _port.Parity = (System.IO.Ports.Parity)value;
+        }
+
+        public StopBits StopBits
+        {
+            get => (StopBits)_port.StopBits - 1;
+            set => _port.StopBits = (System.IO.Ports.StopBits)value;
+        }
 
         public SerialPortShim(System.IO.Ports.SerialPort port)
         {
