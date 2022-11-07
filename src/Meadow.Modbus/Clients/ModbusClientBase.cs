@@ -175,8 +175,8 @@ namespace Meadow.Modbus
                 _syncRoot.Release();
             }
 
-            var registers = new ushort[registerCount];
-            for (var i = 0; i < registerCount; i++)
+            var registers = new ushort[result.Length / 2];
+            for (var i = 0; i < registers.Length; i++)
             {
                 registers[i] = (ushort)((result[i * 2] << 8) | (result[i * 2 + 1]));
             }
