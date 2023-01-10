@@ -30,6 +30,16 @@ namespace Meadow.Modbus
         /// <returns></returns>
         Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount);
 
+        /// <summary>
+        /// Reads the requested number of floats from the holding registers
+        /// Each float is two sequential registers
+        /// </summary>
+        /// <param name="modbusAddress"></param>
+        /// <param name="startRegister"></param>
+        /// <param name="floatCount"></param>
+        /// <returns></returns>
+        Task<float[]> ReadHoldingRegistersFloat(byte modbusAddress, ushort startRegister, int floatCount);
+
         Task WriteCoil(byte modbusAddress, ushort register, bool value);
         Task<bool[]> ReadCoils(byte modbusAddress, ushort startCoil, int coilCount);
     }

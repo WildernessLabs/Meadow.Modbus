@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 
 namespace Meadow.Modbus
 {
@@ -115,6 +116,19 @@ namespace Meadow.Modbus
             }
         }
 
+        public async Task<float[]> ReadHoldingRegistersFloat(byte modbusAddress, ushort startRegister, int floatCount)
+        {
+            var data = await ReadHoldingRegisters(modbusAddress, startRegister, floatCount * 2);
+
+            var values = new float[data.Length / 2];
+
+            for(int i = 0; i < values.Length; i++)
+            {
+                values[i] = ConvertUShortsToFloat(data[i * 2 + 1], data[i * 2]);
+            }
+            return values;
+        }
+               
         public async Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount)
         {
             if (startRegister > 40000)
@@ -235,6 +249,28 @@ namespace Meadow.Modbus
             }
 
             return values;
+        }
+
+        float ConvertUShortsToFloat(ushort high, ushort low)
+        {
+            // Combine the high and low values into a single uint
+            uint input = (uint)(((high & 0x00FF) << 24) |
+                                ((high & 0xFF00) << 8) |
+                                 (low & 0x00FF) << 8 |
+                                  low >> 8);
+
+            // Get the sign bit
+            uint signBit = (input >> 31) & 1;
+            int sign = 1 - (int)(2 * signBit);
+            // Get the exponent bits
+            var exponentBits = ((input >> 23) & 0xFF);
+            var exponent = exponentBits - 127;
+            // Get the fraction
+            var fractionBits = (input & 0x7FFFFF);
+            var fraction = 1.0 + fractionBits / Math.Pow(2, 23);
+
+            // get the value
+            return (float)(sign * fraction * Math.Pow(2, exponent));
         }
     }
 }
