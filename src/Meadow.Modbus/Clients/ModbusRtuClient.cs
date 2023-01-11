@@ -157,12 +157,33 @@ namespace Meadow.Modbus
 
         protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
         {
-            var message = new byte[4 + data.Length + 2]; // header + data + crc
+            byte[] message;
+
+            switch (function)
+            {
+                case ModbusFunction.WriteMultipleCoils:
+                case ModbusFunction.WriteMultipleRegisters:
+                    message = new byte[4 + data.Length + 4]; // header + length + data + crc
+                    break;
+                default:
+                    message = new byte[4 + data.Length + 2]; // header + data + crc
+                    break;
+            }
 
             message[0] = modbusAddress;
             message[1] = (byte)function;
             message[2] = (byte)(register >> 8);
             message[3] = (byte)(register & 0xff);
+
+            switch (function)
+            {
+                case ModbusFunction.WriteMultipleCoils:
+                case ModbusFunction.WriteMultipleRegisters:
+                    var registers = (ushort)(data.Length / 2);
+                    message[4] = (byte)(registers >> 8);
+                    message[5] = (byte)(registers & 0xff);
+                    break;
+            }
 
             Array.Copy(data, 0, message, HEADER_DATA_OFFSET, data.Length);
 

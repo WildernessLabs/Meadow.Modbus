@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Meadow.Modbus
@@ -20,6 +21,15 @@ namespace Meadow.Modbus
         /// <param name="register"></param>
         /// <param name="value"></param>
         Task WriteHoldingRegister(byte modbusAddress, ushort register, ushort value);
+
+        /// <summary>
+        /// Writes multiple values to holding registers (modbus function 16)
+        /// </summary>
+        /// <param name="modbusAddress">The target device modbus address</param>
+        /// <param name="startRegister">The first register to begin writing</param>
+        /// <param name="values">The registers (16-bit values) to write</param>
+        /// <returns></returns>
+        Task WriteHoldingRegisters(byte modbusAddress, ushort startRegister, IEnumerable<ushort> values);
 
         /// <summary>
         /// Reads the requested number of holding registers from a device

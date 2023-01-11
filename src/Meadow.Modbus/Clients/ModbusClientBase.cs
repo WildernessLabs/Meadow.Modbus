@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Sources;
 
 namespace Meadow.Modbus
 {
@@ -116,19 +117,45 @@ namespace Meadow.Modbus
             }
         }
 
+        public async Task WriteHoldingRegisters(byte modbusAddress, ushort startRegister, IEnumerable<ushort> values)
+        {
+            if (startRegister > 40000)
+            {
+                // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
+                // we'll support th user passing in the definition either way
+                startRegister -= 40001;
+            }
+
+            // swap endianness, because Modbus
+            var data = values.SelectMany(i => BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)i))).ToArray();
+
+            var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteMultipleRegisters, startRegister, data);
+            await _syncRoot.WaitAsync();
+
+            try
+            {
+                await DeliverMessage(message);
+                await ReadResult(ModbusFunction.WriteMultipleRegisters);
+            }
+            finally
+            {
+                _syncRoot.Release();
+            }
+        }
+
         public async Task<float[]> ReadHoldingRegistersFloat(byte modbusAddress, ushort startRegister, int floatCount)
         {
             var data = await ReadHoldingRegisters(modbusAddress, startRegister, floatCount * 2);
 
             var values = new float[data.Length / 2];
 
-            for(int i = 0; i < values.Length; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 values[i] = ConvertUShortsToFloat(data[i * 2 + 1], data[i * 2]);
             }
             return values;
         }
-               
+
         public async Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount)
         {
             if (startRegister > 40000)
