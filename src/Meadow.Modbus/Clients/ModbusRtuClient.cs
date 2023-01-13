@@ -91,6 +91,7 @@ namespace Meadow.Modbus
             switch (function)
             {
                 case ModbusFunction.WriteMultipleRegisters:
+                case ModbusFunction.WriteMultipleCoils:
                     bufferLen = 8; //fixed length
                     resultLen = 0; //no result data
                     break;
@@ -123,6 +124,11 @@ namespace Meadow.Modbus
             var expectedCrc = Crc(buffer, 0, buffer.Length - 2);
             var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
             if (expectedCrc != actualCrc) { throw new CrcException(); }
+
+            if(resultLen == 0)
+            {   //happens on write multiples
+                return new byte[0];
+            }
 
             var result = new byte[resultLen];
             Array.Copy(buffer, headerLen, result, 0, result.Length);
