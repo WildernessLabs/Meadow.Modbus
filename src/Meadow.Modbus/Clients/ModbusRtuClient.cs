@@ -74,41 +74,47 @@ namespace Meadow.Modbus
                 if (_port.ReadTimeout.TotalMilliseconds > 0 && t > _port.ReadTimeout.TotalMilliseconds) throw new TimeoutException();
             }
 
-            var header = new byte[3];
+            int headerLen = function switch
+            {
+                ModbusFunction.WriteMultipleRegisters => 6,
+                _ => 3
+            };
 
-            // read 5 bytes so we can get the length
+            var header = new byte[headerLen];
+
+            // read header to determine result length
             _port.Read(header, 0, header.Length);
 
-            // TODO: verify these?
-            // header[0] == modbus address
-            // header[1] == called function
-            // header[2] == data length
-
-            //            if (function != (ModbusFunction)header[1])
-            //            {
-            // TODO: should we care?
-            //            }
-
-            int dataLength;
+            int bufferLen;
+            int resultLen;
 
             switch (function)
             {
+                case ModbusFunction.WriteMultipleRegisters:
+                case ModbusFunction.WriteMultipleCoils:
+                    bufferLen = 8; //fixed length
+                    resultLen = 0; //no result data
+                    break;
                 case ModbusFunction.WriteRegister:
-                    dataLength = 7;
+                    bufferLen = 7 + header[headerLen - 1];
+                    resultLen = header[2];
                     break;
                 case ModbusFunction.ReadHoldingRegister:
-                    dataLength = 5;
+                    bufferLen = 5 + header[headerLen - 1];
+                    resultLen = header[2];
                     break;
                 default:
-                    dataLength = 5;
+                    bufferLen = 5 + header[headerLen - 1];
+                    resultLen = header[2];
                     break;
             }
-            var buffer = new byte[header[2] + dataLength]; // header + length + CRC
+
+            var buffer = new byte[bufferLen]; // header + length + CRC
 
             // the CRC includes the header, so we need those in the buffer
-            Array.Copy(header, buffer, 3);
+            Array.Copy(header, buffer, headerLen);
 
-            var read = 3;
+            var read = headerLen;
             while (read < buffer.Length)
             {
                 read += _port.Read(buffer, read, buffer.Length - read);
@@ -117,10 +123,15 @@ namespace Meadow.Modbus
             // do a CRC on all but the last 2 bytes, then see if that matches the last 2
             var expectedCrc = Crc(buffer, 0, buffer.Length - 2);
             var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
-            if (expectedCrc != actualCrc) throw new CrcException();
+            if (expectedCrc != actualCrc) { throw new CrcException(); }
 
-            var result = new byte[buffer[2]];
-            Array.Copy(buffer, 3, result, 0, result.Length);
+            if(resultLen == 0)
+            {   //happens on write multiples
+                return new byte[0];
+            }
+
+            var result = new byte[resultLen];
+            Array.Copy(buffer, headerLen, result, 0, result.Length);
 
             return await Task.FromResult(result);
         }
@@ -158,12 +169,13 @@ namespace Meadow.Modbus
         protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
         {
             byte[] message;
+            int offset = HEADER_DATA_OFFSET;
 
             switch (function)
             {
                 case ModbusFunction.WriteMultipleCoils:
                 case ModbusFunction.WriteMultipleRegisters:
-                    message = new byte[4 + data.Length + 4]; // header + length + data + crc
+                    message = new byte[4 + data.Length + 5]; // header + length + data + crc
                     break;
                 default:
                     message = new byte[4 + data.Length + 2]; // header + data + crc
@@ -182,10 +194,12 @@ namespace Meadow.Modbus
                     var registers = (ushort)(data.Length / 2);
                     message[4] = (byte)(registers >> 8);
                     message[5] = (byte)(registers & 0xff);
+                    message[6] = (byte)data.Length;
+                    offset += 3;
                     break;
             }
 
-            Array.Copy(data, 0, message, HEADER_DATA_OFFSET, data.Length);
+            Array.Copy(data, 0, message, offset, data.Length);
 
             FillCRC(message);
 
