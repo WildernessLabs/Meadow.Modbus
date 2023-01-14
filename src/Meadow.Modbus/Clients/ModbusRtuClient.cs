@@ -1,5 +1,6 @@
 ﻿using Meadow.Hardware;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Meadow.Modbus
@@ -9,6 +10,19 @@ namespace Meadow.Modbus
         internal CrcException()
             : base("CRC Failure")
         {
+        }
+    }
+
+    public class MeadowModbusRtuClient : ModbusRtuClient
+    {
+        public MeadowModbusRtuClient(ISerialPort port, IDigitalOutputPort enablePort)
+            : base(port, enablePort)
+        {
+            // this forces meadow to compile the serial pipeline.  Without it, there's a big delay on sending the first byte
+            PostOpenAction = () => { port.Write(new byte[] { 0x00 }); };
+
+            // meadow is not-so-fast, and data will not all get transmitted before the call to the port Write() returns
+            PostWriteDelayAction = (m) => { Thread.Sleep((int)((1d / port.BaudRate) * port.DataBits * 1000d * m.Length) + 1); };
         }
     }
 
@@ -41,6 +55,9 @@ namespace Meadow.Modbus
             }
         }
 
+        protected Action? PostOpenAction { get; set; } = null;
+        protected Action<byte[]>? PostWriteDelayAction { get; set; } = null;
+
         public override Task Connect()
         {
             SetEnable(false);
@@ -49,6 +66,8 @@ namespace Meadow.Modbus
             {
                 _port.Open();
                 _port.ClearReceiveBuffer();
+
+                PostOpenAction?.Invoke();
             }
 
             _byteTime = (1d / _port.BaudRate) * _port.DataBits * 1000d;
@@ -125,7 +144,7 @@ namespace Meadow.Modbus
             var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
             if (expectedCrc != actualCrc) { throw new CrcException(); }
 
-            if(resultLen == 0)
+            if (resultLen == 0)
             {   //happens on write multiples
                 return new byte[0];
             }
@@ -139,11 +158,13 @@ namespace Meadow.Modbus
         protected override async Task DeliverMessage(byte[] message)
         {
             SetEnable(true);
+
             _port.Write(message);
             // the above call to the OS transfers data to the serial buffer - it does *not* mean all data has gone out on the wire
             // we must wait for all data to get transmitted before lowering the enable line
-            var wait = (int)(_byteTime * message.Length) + 1;
-            await Task.Delay(wait);
+
+            PostWriteDelayAction?.Invoke(message);
+
             SetEnable(false);
         }
 
