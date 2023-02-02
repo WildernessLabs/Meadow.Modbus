@@ -16,9 +16,9 @@
 
   <ItemGroup>
     <None Include="icon.png" Pack="true" PackagePath="" />
+    <PackageReference Include="Meadow.Contracts" Version="0.94.1" />
+    <PackageReference Include="Meadow.Logging" Version="0.92.5" />
     <PackageReference Include="System.IO.Ports" Version="6.0.0" />
-    <PackageReference Include="Meadow.Logging" Version="0.*" />
-    <PackageReference Include="Meadow.Contracts" Version="0.*" />
   </ItemGroup>
 
 
