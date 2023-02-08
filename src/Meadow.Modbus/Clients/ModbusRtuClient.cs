@@ -1,6 +1,5 @@
 ﻿using Meadow.Hardware;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Meadow.Modbus
@@ -10,19 +9,6 @@ namespace Meadow.Modbus
         internal CrcException()
             : base("CRC Failure")
         {
-        }
-    }
-
-    public class MeadowModbusRtuClient : ModbusRtuClient
-    {
-        public MeadowModbusRtuClient(ISerialPort port, IDigitalOutputPort enablePort)
-            : base(port, enablePort)
-        {
-            // this forces meadow to compile the serial pipeline.  Without it, there's a big delay on sending the first byte
-            PostOpenAction = () => { port.Write(new byte[] { 0x00 }); };
-
-            // meadow is not-so-fast, and data will not all get transmitted before the call to the port Write() returns
-            PostWriteDelayAction = (m) => { Thread.Sleep((int)((1d / port.BaudRate) * port.DataBits * 1000d * m.Length) + 1); };
         }
     }
 
@@ -155,7 +141,7 @@ namespace Meadow.Modbus
             return await Task.FromResult(result);
         }
 
-        protected override async Task DeliverMessage(byte[] message)
+        protected override Task DeliverMessage(byte[] message)
         {
             SetEnable(true);
 
@@ -166,6 +152,8 @@ namespace Meadow.Modbus
             PostWriteDelayAction?.Invoke(message);
 
             SetEnable(false);
+
+            return Task.CompletedTask;
         }
 
         protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
