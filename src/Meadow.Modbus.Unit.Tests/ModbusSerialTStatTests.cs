@@ -89,7 +89,7 @@ namespace Meadow.Modbus.Unit.Tests
                 {
                     ushort sp = 600;
 
-                    for(int i = 0; i < 10; i++)
+                    for (int i = 0; i < 10; i++)
                     {
                         Debug.WriteLine("-->");
                         await client.WriteHoldingRegister(address, setpointRegister, sp);
@@ -121,6 +121,10 @@ namespace Meadow.Modbus.Unit.Tests
                 var readCount = 1;
 
                 var client = new ModbusRtuClient(port);
+                {
+                    // force meadow to compile the serial stuff
+                };
+
                 var r1 = await client.ReadHoldingRegisters(address, startRegister, readCount);
                 Assert.Equal(readCount, r1.Length);
 
