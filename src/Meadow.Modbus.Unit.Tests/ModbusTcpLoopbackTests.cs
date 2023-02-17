@@ -124,7 +124,7 @@ namespace Meadow.Modbus.Unit.Tests
                 {
                     callbackOccurred = false;
 
-                    testRegisterAddress = (ushort)r.Next(ushort.MaxValue);
+                    testRegisterAddress = (ushort)r.Next(9999);
                     var result = await client.ReadHoldingRegisters(255, testRegisterAddress, r.Next(2, 21));
 
                     Assert.True(callbackOccurred);
@@ -219,6 +219,55 @@ namespace Meadow.Modbus.Unit.Tests
                     Assert.Equal(testData.Length, result.Length);
 
                     for (int index = 0; index < testData.Length; index++)
+                    {
+                        Assert.Equal(testData[index], result[index]);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async void ReadMultipleInputRegistersLoopbackTest()
+        {
+            ushort[]? testData = null;
+            ushort testRegisterAddress = 42;
+            bool callbackOccurred = false;
+            var r = new Random();
+
+            using (var server = new ModbusTcpServer(502))
+            using (var client = new ModbusTcpClient("127.0.0.1"))
+            {
+                server.ReadInputRegisterRequest += (address, count) =>
+                {
+                    Assert.Equal(testRegisterAddress, address);
+
+                    // generate some new random data - the request is for registers, which are ushorts
+                    testData = new ushort[count];
+                    for (int i = 0; i < testData.Length; i++)
+                    {
+                        testData[i] = (ushort)r.Next(ushort.MaxValue);
+                    }
+
+                    callbackOccurred = true;
+                    return new ModbusReadResult(testData);
+                };
+
+                server.Start();
+
+                await client.Connect();
+
+                // loop for 5 reads - reading 1-16 coils
+                // the event handler above checks the result
+                for (int i = 0; i < 5; i++)
+                {
+                    testRegisterAddress = (ushort)r.Next(9999); // register range is only 10k
+                    var result = await client.ReadInputRegisters(255, testRegisterAddress, r.Next(1, 17));
+                    Assert.True(callbackOccurred);
+                    Assert.NotNull(testData);
+                    Assert.NotNull(result);
+                    Assert.Equal(testData?.Length, result.Length);
+
+                    for (int index = 0; index < testData?.Length; index++)
                     {
                         Assert.Equal(testData[index], result[index]);
                     }
