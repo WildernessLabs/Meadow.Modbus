@@ -41,6 +41,9 @@ namespace Meadow.Modbus
             }
         }
 
+        protected Action? PostOpenAction { get; set; } = null;
+        protected Action<byte[]>? PostWriteDelayAction { get; set; } = null;
+
         public override Task Connect()
         {
             SetEnable(false);
@@ -49,6 +52,8 @@ namespace Meadow.Modbus
             {
                 _port.Open();
                 _port.ClearReceiveBuffer();
+
+                PostOpenAction?.Invoke();
             }
 
             _byteTime = (1d / _port.BaudRate) * _port.DataBits * 1000d;
@@ -125,7 +130,7 @@ namespace Meadow.Modbus
             var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
             if (expectedCrc != actualCrc) { throw new CrcException(); }
 
-            if(resultLen == 0)
+            if (resultLen == 0)
             {   //happens on write multiples
                 return new byte[0];
             }
@@ -136,15 +141,19 @@ namespace Meadow.Modbus
             return await Task.FromResult(result);
         }
 
-        protected override async Task DeliverMessage(byte[] message)
+        protected override Task DeliverMessage(byte[] message)
         {
             SetEnable(true);
+
             _port.Write(message);
             // the above call to the OS transfers data to the serial buffer - it does *not* mean all data has gone out on the wire
             // we must wait for all data to get transmitted before lowering the enable line
-            var wait = (int)(_byteTime * message.Length) + 1;
-            await Task.Delay(wait);
+
+            PostWriteDelayAction?.Invoke(message);
+
             SetEnable(false);
+
+            return Task.CompletedTask;
         }
 
         protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
