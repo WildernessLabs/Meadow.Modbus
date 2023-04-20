@@ -18,10 +18,4 @@
     <None Include="icon.png" Pack="true" PackagePath="" />
     <PackageReference Include="System.IO.Ports" Version="6.0.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Meadow.Contracts\Source\Meadow.Contracts\Meadow.Contracts.csproj" />
-  </ItemGroup>
-
-
 </Project>
