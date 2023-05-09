@@ -93,12 +93,18 @@ namespace Meadow.Modbus
             int bufferLen;
             int resultLen;
 
-            switch (function)
+            switch (function) // result function
             {
+                // ref: https://www.modbustools.com/modbus.html
+
                 case ModbusFunction.WriteMultipleRegisters:
-                case ModbusFunction.WriteMultipleCoils:
-                    bufferLen = 8; //fixed length
-                    resultLen = 0; //no result data
+                case ModbusFunction.WriteMultipleCoils: // Not implemented yet
+                    bufferLen = 8; // fixed length
+                    resultLen = 0; // no result data
+                    break;
+                case ModbusFunction.WriteCoil:
+                    bufferLen = 8; // fixed length
+                    resultLen = 0; // no result data
                     break;
                 case ModbusFunction.WriteRegister:
                     bufferLen = 7 + header[headerLen - 1];

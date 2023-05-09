@@ -10,6 +10,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		readme.md = readme.md
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meadow.Modbus.Unit.Tests", "Meadow.Modbus.Unit.Tests\Meadow.Modbus.Unit.Tests.csproj", "{EEA2698C-156D-49F0-8042-F48D6508466A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{934C99DF-77F7-432C-AA81-B5FAE23B20DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{934C99DF-77F7-432C-AA81-B5FAE23B20DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{934C99DF-77F7-432C-AA81-B5FAE23B20DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEA2698C-156D-49F0-8042-F48D6508466A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEA2698C-156D-49F0-8042-F48D6508466A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEA2698C-156D-49F0-8042-F48D6508466A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEA2698C-156D-49F0-8042-F48D6508466A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

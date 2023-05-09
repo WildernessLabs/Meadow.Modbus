@@ -226,7 +226,7 @@ namespace Meadow.Modbus
 
         public async Task WriteCoil(byte modbusAddress, ushort register, bool value)
         {
-            var data = value ? new byte[] { 0xff, 0xff } : new byte[] { 0x00, 0x00 };
+            var data = value ? new byte[] { 0xff, 0x00 } : new byte[] { 0x00, 0x00 }; // Changed from 0xFF, 0xFF causing CRC error on Modbus IOModule
 
             var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteCoil, register, data);
 
