@@ -188,7 +188,9 @@ namespace Meadow.Modbus
 
             switch (function)
             {
-                case ModbusFunction.WriteMultipleCoils:
+                case ModbusFunction.WriteMultipleCoils: // Not implemented yet
+                    message = new byte[4 + data.Length + 2]; // header + length + data + crc
+                    break;
                 case ModbusFunction.WriteMultipleRegisters:
                     message = new byte[4 + data.Length + 5]; // header + length + data + crc
                     break;
@@ -204,7 +206,8 @@ namespace Meadow.Modbus
 
             switch (function)
             {
-                case ModbusFunction.WriteMultipleCoils:
+                case ModbusFunction.WriteMultipleCoils: // Not implemented yet
+                    break;
                 case ModbusFunction.WriteMultipleRegisters:
                     var registers = (ushort)(data.Length / 2);
                     message[4] = (byte)(registers >> 8);
