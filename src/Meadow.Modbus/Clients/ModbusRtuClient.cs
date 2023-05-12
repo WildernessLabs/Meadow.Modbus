@@ -98,11 +98,8 @@ namespace Meadow.Modbus
                 // ref: https://www.modbustools.com/modbus.html
 
                 case ModbusFunction.WriteMultipleRegisters:
-                case ModbusFunction.WriteMultipleCoils: // Not implemented yet
-                    bufferLen = 8; // fixed length
-                    resultLen = 0; // no result data
-                    break;
-                case ModbusFunction.WriteCoil:
+                case ModbusFunction.WriteMultipleCoils:
+                 case ModbusFunction.WriteCoil:
                     bufferLen = 8; // fixed length
                     resultLen = 0; // no result data
                     break;
@@ -189,6 +186,8 @@ namespace Meadow.Modbus
             switch (function)
             {
                 case ModbusFunction.WriteMultipleCoils:
+                    message = new byte[4 + data.Length + 2]; // header + length + data + crc
+                    break;
                 case ModbusFunction.WriteMultipleRegisters:
                     message = new byte[4 + data.Length + 5]; // header + length + data + crc
                     break;
@@ -205,6 +204,7 @@ namespace Meadow.Modbus
             switch (function)
             {
                 case ModbusFunction.WriteMultipleCoils:
+                    break;
                 case ModbusFunction.WriteMultipleRegisters:
                     var registers = (ushort)(data.Length / 2);
                     message[4] = (byte)(registers >> 8);
