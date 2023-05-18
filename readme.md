@@ -41,7 +41,7 @@ PM> Install-Package Meadow.Modbus
 
 Create a ModbusRtuClient instance, passing in the SerialPort for COM4 and DigitalOutputPort used for the enable.
 
-```
+```csharp
 var port = Device.CreateSerialPort(Device.SerialPortNames.Com4, 19200, 8, Meadow.Hardware.Parity.None, Meadow.Hardware.StopBits.One);
 port.WriteTimeout = port.ReadTimeout = TimeSpan.FromSeconds(5);
 var enable = Device.CreateDigitalOutputPort(Device.Pins.D02, false);
@@ -51,7 +51,7 @@ The Temco TSTAT8 uses holding registers for all of its interfacing. It has a lot
 
 To read the current temperature and output it to the console every 5 seconds, we can use a loop like this:
 
-```
+```csharp
 byte address = 201;
 
 ushort tempRegister = 121; // current temp, in tenths of a degree
@@ -68,7 +68,7 @@ while (true)
 
 Writing to a holding register is similar to the read shown above. Below is code that reads the setpoint, changes it with a write, then re-reads to verify the change:
 
-```
+```csharp
 byte address = 201;
 ushort setPointRegister = 345; // occupied setpoint, in tenths of a degree
 
