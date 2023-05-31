@@ -9,6 +9,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_External", "_External", "{
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meadow.Contracts", "..\..\Meadow.Contracts\Source\Meadow.Contracts\Meadow.Contracts.csproj", "{8B00FCA1-8197-4A91-B438-BA2A961DE27A}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meadow.Units", "..\..\Meadow.Units\Source\Meadow.Units\Meadow.Units.csproj", "{F7A3D6E9-599F-483F-A316-8B6DD3903354}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meadow.Logging", "..\..\Meadow.Logging\Source\Meadow.Logging\lib\Meadow.Logging.csproj", "{4C1B5973-66C5-44FA-A9A0-FD7EE3F583E7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,12 +29,24 @@ Global
 		{8B00FCA1-8197-4A91-B438-BA2A961DE27A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B00FCA1-8197-4A91-B438-BA2A961DE27A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8B00FCA1-8197-4A91-B438-BA2A961DE27A}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{F7A3D6E9-599F-483F-A316-8B6DD3903354}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7A3D6E9-599F-483F-A316-8B6DD3903354}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7A3D6E9-599F-483F-A316-8B6DD3903354}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{F7A3D6E9-599F-483F-A316-8B6DD3903354}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7A3D6E9-599F-483F-A316-8B6DD3903354}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7A3D6E9-599F-483F-A316-8B6DD3903354}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{4C1B5973-66C5-44FA-A9A0-FD7EE3F583E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C1B5973-66C5-44FA-A9A0-FD7EE3F583E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C1B5973-66C5-44FA-A9A0-FD7EE3F583E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C1B5973-66C5-44FA-A9A0-FD7EE3F583E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{8B00FCA1-8197-4A91-B438-BA2A961DE27A} = {13E6AFAD-9B96-4F77-A707-7DC02142B66A}
+		{F7A3D6E9-599F-483F-A316-8B6DD3903354} = {13E6AFAD-9B96-4F77-A707-7DC02142B66A}
+		{4C1B5973-66C5-44FA-A9A0-FD7EE3F583E7} = {13E6AFAD-9B96-4F77-A707-7DC02142B66A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5FCB68E9-82F3-44F9-BF93-D9A8F55D7F9E}
