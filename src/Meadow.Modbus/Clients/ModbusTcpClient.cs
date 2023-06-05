@@ -155,12 +155,11 @@ namespace Meadow.Modbus
             {
                 await _client.GetStream().WriteAsync(message, 0, message.Length);
             }
-            catch (Exception ex)
+            catch
             {
                 IsConnected = false;
                 _client.Close();
             }
-
         }
 
         protected override async Task<byte[]> ReadResult(ModbusFunction function)
