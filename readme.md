@@ -1,12 +1,9 @@
+[![NuGet Badge](https://buildstats.info/nuget/Meadow.Modbus)](https://www.nuget.org/packages/Meadow.Modbus)
+[![Build Modbus](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/build.yml/badge.svg)](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/build.yml)
+
 <img src="design/banner.jpg" style="margin-bottom:10px" />
 
-## Repo Status
-
-[![Build Modbus](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/build.yml/badge.svg)](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/build.yml)    
-[![Modbus Unit Tests](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/tests.yml/badge.svg)](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/tests.yml)  
-[![NuGet Package Creation](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/package.yml/badge.svg)](https://github.com/WildernessLabs/Meadow.Modbus/actions/workflows/package.yml)
-
-## Supported Platforms and Distributions
+# Meadow.Modbus
 
 `Meadow.Modbus` is designed to be cross-platform, and does not require the use of `Meadow.Core`, meaning that it can be used in pretty much any modern .NET application.
 
@@ -21,19 +18,7 @@ It has been verified on hardware on the following platforms:
 | Modbus TCP Client | Raspberry Pi, Raspbian Buster | .NET 5, .NET 6 and Mono |
 | Modbus TCP Server | Windows 10 | .NET 6 |
 
-## License
-
-Apache 2.0
-
-See [LICENSE File](/LICENSE)
-
-## Examples
-
-All samples use the `Meadow.Modbus` library, available in NuGet:
-
-```
-PM> Install-Package Meadow.Modbus
-```
+## Usage Examples
 
 ### Modbus RTU Client
 
@@ -41,17 +26,19 @@ PM> Install-Package Meadow.Modbus
 
 Create a ModbusRtuClient instance, passing in the SerialPort for COM4 and DigitalOutputPort used for the enable.
 
-```
+```csharp
 var port = Device.CreateSerialPort(Device.SerialPortNames.Com4, 19200, 8, Meadow.Hardware.Parity.None, Meadow.Hardware.StopBits.One);
 port.WriteTimeout = port.ReadTimeout = TimeSpan.FromSeconds(5);
+
 var enable = Device.CreateDigitalOutputPort(Device.Pins.D02, false);
 var client = new ModbusRtuClient(port, enable);
-The Temco TSTAT8 uses holding registers for all of its interfacing. It has a lot of registers for reading or controlling just about every aspect of its operation. For our purposes we’ll only look at two of them: current temperature and current occupied setpoint. Since Modbus holding registers are ushort values, but the actual temperature and setpoint are in tenths of a degree, we have to do scaling in our application. For example a current temperature register reading of 721 equates to a temeprature of 72.1 degrees. Similarly if we want to set a setpoint of 69.5 degrees, we write 695.
 ```
+
+The Temco TSTAT8 uses holding registers for all of its interfacing. It has a lot of registers for reading or controlling just about every aspect of its operation. For our purposes we’ll only look at two of them: current temperature and current occupied setpoint. Since Modbus holding registers are ushort values, but the actual temperature and setpoint are in tenths of a degree, we have to do scaling in our application. For example a current temperature register reading of 721 equates to a temeprature of 72.1 degrees. Similarly if we want to set a setpoint of 69.5 degrees, we write 695.
 
 To read the current temperature and output it to the console every 5 seconds, we can use a loop like this:
 
-```
+```csharp
 byte address = 201;
 
 ushort tempRegister = 121; // current temp, in tenths of a degree
@@ -68,10 +55,9 @@ while (true)
 
 Writing to a holding register is similar to the read shown above. Below is code that reads the setpoint, changes it with a write, then re-reads to verify the change:
 
-```
+```csharp
 byte address = 201;
 ushort setPointRegister = 345; // occupied setpoint, in tenths of a degree
-
 
 Console.WriteLine($"Reading setpoint holding register...");
 
@@ -101,3 +87,9 @@ Console.WriteLine($"Current set point: {registers[0] / 10f}");
 ### Modbus TCP Server
 
 > Coming Soon!
+
+## License
+
+Apache 2.0
+
+See [LICENSE File](/LICENSE)
