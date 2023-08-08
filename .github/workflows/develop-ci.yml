@@ -49,4 +49,4 @@ jobs:
       run: dotnet build -c Release Meadow.Modbus/src/Meadow.Modbus.sln
 
     - name: Unit Tests
-      run: dotnet test -c Release  Meadow.Modbus/src/Meadow.Modbus.sln --no-restore --verbosity normal
+      run: dotnet test -c Release Meadow.Modbus/src/Meadow.Modbus.sln --no-restore --verbosity normal
