@@ -256,12 +256,12 @@ namespace Meadow.Modbus.Unit.Tests
 
                 await client.Connect();
 
-                // loop for 5 reads - reading 1-16 coils
+                // loop for 5 reads - reading up to 128
                 // the event handler above checks the result
                 for (int i = 0; i < 5; i++)
                 {
                     testRegisterAddress = (ushort)r.Next(9999); // register range is only 10k
-                    var result = await client.ReadInputRegisters(255, testRegisterAddress, r.Next(1, 17));
+                    var result = await client.ReadInputRegisters(255, testRegisterAddress, r.Next(1, 128));
                     Assert.True(callbackOccurred);
                     Assert.NotNull(testData);
                     Assert.NotNull(result);
