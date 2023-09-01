@@ -18,6 +18,7 @@ public class ModbusTcpServer : IDisposable
     public event WriteCoilDelegate? WriteCoilRequest;
     public event WriteRegisterDelegate? WriteRegisterRequest;
     public event EventHandler<EndPoint> ClientConnected;
+    public event EventHandler<EndPoint> ClientDisonnected;
 
     public const int DefaultModbusTCPPort = 502;
     public const int DefaultReceiveBufferSize = 1024;
@@ -197,7 +198,7 @@ public class ModbusTcpServer : IDisposable
         catch (System.IO.IOException e)
         {
             // client likely disconnected
-            throw;
+            ClientDisonnected?.Invoke(this, client.Client.RemoteEndPoint);
         }
         catch (Exception ex)
         {
