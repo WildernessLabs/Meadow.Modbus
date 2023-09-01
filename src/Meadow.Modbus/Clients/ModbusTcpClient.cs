@@ -150,6 +150,10 @@ namespace Meadow.Modbus
                 // this is used in testing, nothing gets sent
                 return;
             }
+            if (!_client.Connected)
+            {
+                return;
+            }
 
             try
             {
@@ -178,7 +182,8 @@ namespace Meadow.Modbus
 
             if (!_client.Connected)
             {
-                throw new System.Net.Sockets.SocketException();
+                return new byte[0];
+                //                throw new System.Net.Sockets.SocketException();
             }
 
             // responses (even an error) are at least 9 bytes - read enough to know the status
