@@ -9,7 +9,7 @@ public delegate IModbusResult ReadDelegate(ushort startAddress, short length);
 public delegate IModbusResult WriteCoilDelegate(ushort startAddress, bool[] data);
 public delegate IModbusResult WriteRegisterDelegate(ushort startAddress, ushort[] data);
 
-public class ModbusTcpServer : IDisposable
+public class ModbusTcpServer : IModbusServer, IDisposable
 {
     public event ReadDelegate? ReadCoilRequest;
     public event ReadDelegate? ReadDiscreteRequest;
