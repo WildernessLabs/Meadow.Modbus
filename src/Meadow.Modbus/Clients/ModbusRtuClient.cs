@@ -97,6 +97,7 @@ public class ModbusRtuClient : ModbusClientBase
         {
             case ModbusFunction.WriteMultipleRegisters:
             case ModbusFunction.WriteMultipleCoils:
+            case ModbusFunction.WriteCoil:
                 bufferLen = 8; //fixed length
                 resultLen = 0; //no result data
                 break;

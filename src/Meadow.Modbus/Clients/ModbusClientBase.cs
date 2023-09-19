@@ -226,7 +226,7 @@ namespace Meadow.Modbus
 
         public async Task WriteCoil(byte modbusAddress, ushort register, bool value)
         {
-            var data = value ? new byte[] { 0xff, 0xff } : new byte[] { 0x00, 0x00 };
+            var data = value ? new byte[] { 0xff, 0x00 } : new byte[] { 0x00, 0x00 };
 
             var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteCoil, register, data);
 
@@ -278,7 +278,7 @@ namespace Meadow.Modbus
             return values;
         }
 
-        float ConvertUShortsToFloat(ushort high, ushort low)
+        private float ConvertUShortsToFloat(ushort high, ushort low)
         {
             // Combine the high and low values into a single uint
             uint input = (uint)(((high & 0x00FF) << 24) |

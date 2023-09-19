@@ -56,13 +56,13 @@ namespace Meadow.Modbus.Unit.Tests
             {
                 await client.WriteCoil(1, 7, true);
             }
-            catch(TimeoutException)
+            catch (TimeoutException)
             {
                 // NOP - expected
             }
 
             // valid output from a known-good RTU sender
-            var expected = new byte[] { 0x01, 0x05, 0x00, 0x07, 0xff, 0xff, 0x7d, 0xbb };
+            var expected = new byte[] { 0x01, 0x05, 0x00, 0x07, 0xff, 0x00, 0x3d, 0xfb };
 
             Assert.Equal(expected, port.OutputBuffer);
         }
