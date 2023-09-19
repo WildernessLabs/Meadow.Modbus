@@ -184,6 +184,8 @@ public class ModbusRtuClient : ModbusClientBase
         switch (function)
         {
             case ModbusFunction.WriteMultipleCoils:
+                message = new byte[4 + data.Length + 2]; // header + length + crc
+                break;
             case ModbusFunction.WriteMultipleRegisters:
                 message = new byte[4 + data.Length + 5]; // header + length + data + crc
                 break;
@@ -200,6 +202,7 @@ public class ModbusRtuClient : ModbusClientBase
         switch (function)
         {
             case ModbusFunction.WriteMultipleCoils:
+                break;
             case ModbusFunction.WriteMultipleRegisters:
                 var registers = (ushort)(data.Length / 2);
                 message[4] = (byte)(registers >> 8);

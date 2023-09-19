@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -235,6 +236,37 @@ namespace Meadow.Modbus
             {
                 await DeliverMessage(message);
                 await ReadResult(ModbusFunction.WriteCoil);
+            }
+            finally
+            {
+                _syncRoot.Release();
+            }
+        }
+
+        public async Task WriteMultipleCoils(byte modbusAddress, ushort startRegister, IEnumerable<bool> values)
+        {
+            // Reduce bool value list to 8 bit byte array
+            ushort byteArrayLength = (ushort)((values.Count() / 8) + (ushort)((values.Count() % 8) > 0 ? 1 : 0)); // Calc # 8 bit bytes needed to TX
+            byte[] msgSegment = new byte[2 + 1 + byteArrayLength]; // StartAddr + coils + value bytes
+            byte[] bitArray = new byte[values.Count()];
+
+            msgSegment[0] = (byte)(values.Count() >> 8);    // Qty of coils HI
+            msgSegment[1] = (byte)(values.Count() & 0xFF);  // Qty of coils LO
+            msgSegment[2] = (byte)byteArrayLength;          // Byte count
+
+            new BitArray(values.ToArray()).CopyTo(msgSegment, 3); // Concatinate bool binary values list as converted bytes
+
+            var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteMultipleCoils, startRegister, msgSegment);
+            await _syncRoot.WaitAsync();
+
+            try
+            {
+                await DeliverMessage(message);
+                await ReadResult(ModbusFunction.WriteMultipleRegisters);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"WriteMultipleCoils Exception [{ex.Message}]");
             }
             finally
             {
