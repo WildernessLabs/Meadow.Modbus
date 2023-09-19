@@ -126,7 +126,7 @@ public class ModbusRtuClient : ModbusClientBase
         }
 
         // do a CRC on all but the last 2 bytes, then see if that matches the last 2
-        var expectedCrc = Crc(buffer, 0, buffer.Length - 2);
+        var expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
         var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
         if (expectedCrc != actualCrc) { throw new CrcException(); }
 
@@ -169,7 +169,7 @@ public class ModbusRtuClient : ModbusClientBase
         message[4] = (byte)(registerCount >> 8);
         message[5] = (byte)registerCount;
 
-        FillCRC(message);
+        RtuHelpers.FillCRC(message);
 
         return message;
 
@@ -210,39 +210,8 @@ public class ModbusRtuClient : ModbusClientBase
 
         Array.Copy(data, 0, message, offset, data.Length);
 
-        FillCRC(message);
+        RtuHelpers.FillCRC(message);
 
         return message;
-    }
-
-    private ushort Crc(byte[] data, int index, int count)
-    {
-        ushort crc = 0xFFFF;
-        char lsb;
-
-        for (int i = index; i < count; i++)
-        {
-            crc = (ushort)(crc ^ data[i]);
-
-            for (int j = 0; j < 8; j++)
-            {
-                lsb = (char)(crc & 0x0001);
-                crc = (ushort)((crc >> 1) & 0x7fff);
-
-                if (lsb == 1)
-                    crc = (ushort)(crc ^ 0xa001);
-            }
-        }
-
-        return crc;
-    }
-
-    private void FillCRC(byte[] message)
-    {
-        var crc = Crc(message, 0, message.Length - 2);
-
-        // fill in the CRC (last 2 bytes) - big-endian
-        message[message.Length - 1] = (byte)((crc >> 8) & 0xff);
-        message[message.Length - 2] = (byte)(crc & 0xff);
     }
 }

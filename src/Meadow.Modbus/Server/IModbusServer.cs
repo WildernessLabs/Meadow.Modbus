@@ -10,5 +10,9 @@ public interface IModbusServer : IDisposable
     public event ReadDelegate? ReadInputRegisterRequest;
     public event WriteCoilDelegate? WriteCoilRequest;
 
+    void Start();
+    void Stop();
+
+    bool IsRunning { get; }
     bool IsDisposed { get; }
 }

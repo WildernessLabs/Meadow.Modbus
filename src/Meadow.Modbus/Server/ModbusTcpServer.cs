@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus;
 
-public delegate IModbusResult ReadDelegate(ushort startAddress, short length);
-public delegate IModbusResult WriteCoilDelegate(ushort startAddress, bool[] data);
-public delegate IModbusResult WriteRegisterDelegate(ushort startAddress, ushort[] data);
+public delegate IModbusResult ReadDelegate(byte modbusAddress, ushort startRegister, short length);
+public delegate IModbusResult WriteCoilDelegate(byte modbusAddress, ushort startRegister, bool[] data);
+public delegate IModbusResult WriteRegisterDelegate(byte modbusAddress, ushort startRegister, ushort[] data);
 
 public class ModbusTcpServer : IModbusServer, IDisposable
 {
@@ -149,27 +149,27 @@ public class ModbusTcpServer : IModbusServer, IDisposable
 
                     var result = ProcessMessage(message);
 
-                    Response? response;
+                    TcpResponse? response;
                     if (result is ModbusErrorResult mer)
                     {
-                        response = Response.CreateErrorResponse(message.Function, header.TransactionID, header.UnitID, mer.ErrorCode);
+                        response = TcpResponse.CreateErrorResponse(message.Function, header.TransactionID, header.UnitID, mer.ErrorCode);
                     }
                     else if (result is ModbusReadResult mrr)
                     {
-                        response = Response.CreateReadResponse(message.Function, header.TransactionID, header.UnitID, mrr.Data);
+                        response = TcpResponse.CreateReadResponse(message.Function, header.TransactionID, header.UnitID, mrr.Data);
                     }
                     else if (result is ModbusWriteResult mwr)
                     {
                         switch (message.Function)
                         {
                             case ModbusFunction.WriteCoil:
-                                response = Response.CreateWriteCoilResponse(message.Function, header.TransactionID, header.UnitID, message.WriteCoilAddress, message.WriteCoilValue);
+                                response = TcpResponse.CreateWriteCoilResponse(message.Function, header.TransactionID, header.UnitID, message.WriteCoilAddress, message.WriteCoilValue);
                                 break;
                             case ModbusFunction.WriteRegister:
-                                response = Response.CreateWriteRegisterResponse(message.Function, header.TransactionID, header.UnitID, message.WriteRegisterAddress, message.WriteRegisterValue);
+                                response = TcpResponse.CreateWriteRegisterResponse(message.Function, header.TransactionID, header.UnitID, message.WriteRegisterAddress, message.WriteRegisterValue);
                                 break;
                             default:
-                                response = Response.CreateWriteResponse(message.Function, header.TransactionID, header.UnitID, mwr.ItemsWritten);
+                                response = TcpResponse.CreateWriteResponse(message.Function, header.TransactionID, header.UnitID, mwr.ItemsWritten);
                                 break;
                         }
                     }
@@ -219,38 +219,38 @@ public class ModbusTcpServer : IModbusServer, IDisposable
             case ModbusFunction.ReadCoil:
                 if (ReadCoilRequest != null)
                 {
-                    return ReadCoilRequest(message.ReadStart, message.ReadLength);
+                    return ReadCoilRequest(255, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.ReadDiscrete:
                 if (ReadDiscreteRequest != null)
                 {
-                    return ReadDiscreteRequest(message.ReadStart, message.ReadLength);
+                    return ReadDiscreteRequest(255, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.ReadHoldingRegister:
                 if (ReadHoldingRegisterRequest != null)
                 {
-                    return ReadHoldingRegisterRequest(message.ReadStart, message.ReadLength);
+                    return ReadHoldingRegisterRequest(255, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.ReadInputRegister:
                 if (ReadInputRegisterRequest != null)
                 {
-                    return ReadInputRegisterRequest(message.ReadStart, message.ReadLength);
+                    return ReadInputRegisterRequest(255, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.WriteCoil:
                 if (WriteCoilRequest != null)
                 {
                     // incoming data is always 2 bytes, either 0x0000 or 0xffff
-                    return WriteCoilRequest(message.WriteCoilAddress, new bool[] { message.WriteCoilValue });
+                    return WriteCoilRequest(255, message.WriteCoilAddress, new bool[] { message.WriteCoilValue });
                 }
                 return null;
             case ModbusFunction.WriteRegister:
                 if (WriteRegisterRequest != null)
                 {
-                    return WriteRegisterRequest.Invoke(message.WriteRegisterAddress, new ushort[] { message.WriteRegisterValue });
+                    return WriteRegisterRequest.Invoke(255, message.WriteRegisterAddress, new ushort[] { message.WriteRegisterValue });
                 }
                 return null;
             case ModbusFunction.WriteMultipleCoils:
@@ -271,7 +271,7 @@ public class ModbusTcpServer : IModbusServer, IDisposable
                         data[i] = v;
                     }
 
-                    return WriteCoilRequest(message.WriteCoilAddress, data);
+                    return WriteCoilRequest(255, message.WriteCoilAddress, data);
                 }
                 return null;
             case ModbusFunction.WriteMultipleRegisters:
@@ -287,7 +287,7 @@ public class ModbusTcpServer : IModbusServer, IDisposable
                         data[i] = (ushort)s;
                     }
 
-                    return WriteRegisterRequest(message.WriteRegisterAddress, data);
+                    return WriteRegisterRequest(255, message.WriteRegisterAddress, data);
                 }
                 return null;
         }

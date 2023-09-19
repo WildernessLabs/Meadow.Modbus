@@ -112,11 +112,14 @@ namespace Meadow.Modbus
         }
 
         /// <inheritdoc/>
-        public int ReadAll(byte[] buffer)
+        public byte[] ReadAll()
         {
-            buffer = new byte[_port.BytesToRead];
-            _port.Read(buffer, 0, buffer.Length);
-            return buffer.Length;
+            var toRead = _port.BytesToRead;
+            if (toRead == 0) return new byte[0];
+
+            var buffer = new byte[_port.BytesToRead];
+            var read = _port.Read(buffer, 0, buffer.Length);
+            return buffer;
         }
 
         /// <inheritdoc/>
