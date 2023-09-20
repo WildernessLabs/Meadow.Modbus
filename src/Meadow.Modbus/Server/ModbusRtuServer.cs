@@ -54,7 +54,7 @@ public class ModbusRtuServer : IModbusServer
         int read = 0;
 
         ModbusFunction function;
-        IModbusResult? result;
+        IModbusResult? result = null;
         RtuResponse? response;
         byte modbusAddress;
 
@@ -88,8 +88,9 @@ public class ModbusRtuServer : IModbusServer
                         read += _port.Read(buffer, read, 8 - read);
                     }
 
-                    expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
-                    actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
+                    expectedCrc = RtuHelpers.Crc(buffer, 0, 6);
+                    actualCrc = (ushort)(buffer[6] | buffer[7] << 8);
+
                     if (expectedCrc != actualCrc)
                     {
                         // the spec says if there's a CRC error, the server will do nothing (not respond)
@@ -112,8 +113,9 @@ public class ModbusRtuServer : IModbusServer
                         read += _port.Read(buffer, read, 8 - read);
                     }
 
-                    expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
-                    actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
+                    expectedCrc = RtuHelpers.Crc(buffer, 0, 6);
+                    actualCrc = (ushort)(buffer[6] | buffer[7] << 8);
+
                     if (expectedCrc != actualCrc)
                     {
                         // the spec says if there's a CRC error, the server will do nothing (not respond)
@@ -128,6 +130,34 @@ public class ModbusRtuServer : IModbusServer
                         (short)((buffer[4] << 8) | buffer[5]));
                     }
 
+                    break;
+                case ModbusFunction.WriteRegister:
+                    while (read < 8)
+                    {
+                        read += _port.Read(buffer, read, 8 - read);
+                    }
+
+                    expectedCrc = RtuHelpers.Crc(buffer, 0, 6);
+                    actualCrc = (ushort)(buffer[6] | buffer[7] << 8);
+
+                    if (expectedCrc != actualCrc)
+                    {
+                        // the spec says if there's a CRC error, the server will do nothing (not respond)
+                        CrcErrorDetected?.Invoke(this, EventArgs.Empty);
+                        result = null;
+                    }
+                    else
+                    {
+                        result = WriteRegisterRequest(
+                        buffer[0],
+                        (ushort)((buffer[2] << 8) | buffer[3]),
+                        new ushort[]
+                        {
+                            (ushort)((buffer[4] << 8) | buffer[5]),
+                        });
+                    }
+                    break;
+                case ModbusFunction.WriteMultipleRegisters:
                     break;
                 default:
                     result = new ModbusErrorResult(ModbusErrorCode.IllegalFunction);

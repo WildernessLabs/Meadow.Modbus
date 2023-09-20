@@ -166,4 +166,39 @@ public class ModbusSerialLoopbackTests
             }
         }
     }
+
+    [Fact]
+    public async void WriteSingleHoldingRegisterTest()
+    {
+        using var portA = new SerialPortShim("COM3", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One);
+        using var portB = new SerialPortShim("COM6", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One);
+
+        var client = new ModbusRtuClient(portA);
+        var server = new ModbusRtuServer(portB);
+
+        ushort testData = 0;
+        var startRegister = (ushort)Random.Shared.Next(1, 10000);
+        var count = Random.Shared.Next(5, 25);
+        var testAddress = (byte)Random.Shared.Next(1, 254);
+        ushort currentRegister = 0;
+
+        server.WriteRegisterRequest += (byte modbusAddress, ushort startRegister, ushort[] data) =>
+        {
+            Assert.Single(data);
+            Assert.Equal(testData, data[0]);
+
+            return new ModbusWriteResult((short)data.Length);
+        };
+
+        server.Start();
+        await client.Connect();
+
+        for (currentRegister = startRegister; currentRegister < startRegister + count; currentRegister++)
+        {
+            testData = (ushort)Random.Shared.Next(1, ushort.MaxValue);
+
+            await client.WriteHoldingRegister(testAddress, currentRegister, testData);
+        }
+    }
+
 }
