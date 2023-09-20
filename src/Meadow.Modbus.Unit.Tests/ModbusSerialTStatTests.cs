@@ -5,40 +5,6 @@ using Xunit;
 
 namespace Meadow.Modbus.Unit.Tests;
 
-public class ModbusSerialLoopbackTests
-{
-    [Fact]
-    public async void MultipleReadHoldingRegisterTest()
-    {
-        using var portA = new SerialPortShim("COM3", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One);
-        using var portB = new SerialPortShim("COM6", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One);
-
-        var client = new ModbusRtuClient(portA);
-
-        var server = new ModbusRtuServer(portB);
-
-        server.ReadHoldingRegisterRequest += (byte modbusAddress, ushort startRegister, short length) =>
-        {
-            var data = new ushort[length];
-            for (var d = 0; d < data.Length; d++)
-            {
-                data[d] = 0x55;
-            }
-            return new ModbusReadResult(data);
-        };
-
-        server.Start();
-        await client.Connect();
-
-        for (ushort register = 0; register < 20; register++)
-        {
-            var hr = await client.ReadHoldingRegisters(10, register, 1);
-        }
-    }
-
-}
-
-
 public class ModbusSerialTStatTests
 {
     // this class assumes a connected serial Temco Controls TSTAT7 or TSTAT8

@@ -11,9 +11,16 @@ internal class RtuResponse
         m_data = data;
     }
 
-    public static RtuResponse CreateErrorResponse(ModbusErrorResult mer)
+    public static RtuResponse CreateErrorResponse(ModbusFunction function, byte modbusAddress, ModbusErrorResult mer)
     {
-        throw new NotImplementedException();
+        var data = new byte[5];
+        data[0] = modbusAddress;
+        data[1] = (byte)function;
+        data[2] = (byte)mer.ErrorCode;
+
+        RtuHelpers.FillCRC(data);
+
+        return new RtuResponse(data);
     }
 
     public static RtuResponse CreateReadResponse(ModbusFunction function, byte modbusAddress, ModbusReadResult mrr)

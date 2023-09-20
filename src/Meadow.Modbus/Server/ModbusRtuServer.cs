@@ -17,6 +17,7 @@ public class ModbusRtuServer : IModbusServer
     public event ReadDelegate? ReadInputRegisterRequest;
     public event WriteCoilDelegate? WriteCoilRequest;
     public event WriteRegisterDelegate? WriteRegisterRequest;
+    public event EventHandler? CrcErrorDetected;
 
     public bool IsRunning
     {
@@ -63,6 +64,11 @@ public class ModbusRtuServer : IModbusServer
             response = null;
 
             // all packets are > 4 bytes, this is enough to get the function and target address
+            while (_port.BytesToRead == 0)
+            {
+                Thread.Sleep(100);
+            }
+
             while (read < 4)
             {
                 read += _port.Read(buffer, read, 4 - read);
@@ -70,6 +76,8 @@ public class ModbusRtuServer : IModbusServer
 
             modbusAddress = buffer[0];
             function = (ModbusFunction)buffer[1];
+            ushort expectedCrc;
+            ushort actualCrc;
 
             switch (function)
             {
@@ -80,12 +88,45 @@ public class ModbusRtuServer : IModbusServer
                         read += _port.Read(buffer, read, 8 - read);
                     }
 
-                    // TODO: check CRC (bytes 6&7)
+                    expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
+                    actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
+                    if (expectedCrc != actualCrc)
+                    {
+                        // the spec says if there's a CRC error, the server will do nothing (not respond)
+                        CrcErrorDetected?.Invoke(this, EventArgs.Empty);
+                        result = null;
+                    }
+                    else
+                    {
+                        result = ReadHoldingRegisterRequest?.Invoke(
+                            buffer[0],
+                            (ushort)((buffer[2] << 8) | buffer[3]),
+                            (short)((buffer[4] << 8) | buffer[5]));
+                    }
 
-                    result = ReadHoldingRegisterRequest?.Invoke(
+                    break;
+                case ModbusFunction.ReadInputRegister:
+                    // always 8 bytes, read 4 more
+                    while (read < 8)
+                    {
+                        read += _port.Read(buffer, read, 8 - read);
+                    }
+
+                    expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
+                    actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
+                    if (expectedCrc != actualCrc)
+                    {
+                        // the spec says if there's a CRC error, the server will do nothing (not respond)
+                        CrcErrorDetected?.Invoke(this, EventArgs.Empty);
+                        result = null;
+                    }
+                    else
+                    {
+                        result = ReadInputRegisterRequest?.Invoke(
                         buffer[0],
                         (ushort)((buffer[2] << 8) | buffer[3]),
                         (short)((buffer[4] << 8) | buffer[5]));
+                    }
 
                     break;
                 default:
@@ -93,13 +134,13 @@ public class ModbusRtuServer : IModbusServer
                     break;
             }
 
-            if (result is ModbusErrorResult mer)
-            {
-                response = RtuResponse.CreateErrorResponse(mer);
-            }
-            else if (result is ModbusReadResult mrr)
+            if (result is ModbusReadResult mrr)
             {
                 response = RtuResponse.CreateReadResponse(function, modbusAddress, mrr);
+            }
+            else if (result is ModbusErrorResult mer)
+            {
+                response = RtuResponse.CreateErrorResponse(function, modbusAddress, mer);
             }
 
             if (response != null)
@@ -107,8 +148,6 @@ public class ModbusRtuServer : IModbusServer
                 var data = response.Serialize();
                 _port.Write(data);
             }
-
-            Thread.Sleep(1000);
         }
 
         _port.Close();

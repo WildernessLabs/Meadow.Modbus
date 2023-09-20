@@ -1,12 +1,11 @@
-﻿namespace Meadow.Modbus
-{
-    public sealed class ModbusWriteResult : IModbusResult
-    {
-        public short ItemsWritten { get; }
+﻿namespace Meadow.Modbus;
 
-        public ModbusWriteResult(short itemsWritten)
-        {
-            ItemsWritten = itemsWritten;
-        }
+public sealed class ModbusWriteResult : IModbusResult
+{
+    public short ItemsWritten { get; }
+
+    public ModbusWriteResult(short itemsWritten)
+    {
+        ItemsWritten = itemsWritten;
     }
 }
