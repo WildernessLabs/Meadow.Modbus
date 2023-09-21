@@ -4,14 +4,35 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus
 {
+    /// <summary>
+    /// Interface for a Modbus bus client.
+    /// </summary>
     public interface IModbusBusClient
     {
+        /// <summary>
+        /// Event that is raised when the client is disconnected.
+        /// </summary>
         event EventHandler Disconnected;
+
+        /// <summary>
+        /// Event that is raised when the client is connected.
+        /// </summary>
         event EventHandler Connected;
 
+        /// <summary>
+        /// Gets a value indicating whether the client is connected.
+        /// </summary>
         public bool IsConnected { get; }
 
+        /// <summary>
+        /// Asynchronously connects the client.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task Connect();
+
+        /// <summary>
+        /// Disconnects the client.
+        /// </summary>
         void Disconnect();
 
         /// <summary>
@@ -50,7 +71,31 @@ namespace Meadow.Modbus
         /// <returns></returns>
         Task<float[]> ReadHoldingRegistersFloat(byte modbusAddress, ushort startRegister, int floatCount);
 
+        /// <summary>
+        /// Writes a coil value to the given register on a device.
+        /// </summary>
+        /// <param name="modbusAddress">The Modbus address of the device.</param>
+        /// <param name="register">The register to write to.</param>
+        /// <param name="value">The value to write.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task WriteCoil(byte modbusAddress, ushort register, bool value);
+
+        /// <summary>
+        /// Writes multiple coil values to the given registers on a device.
+        /// </summary>
+        /// <param name="modbusAddress">The Modbus address of the device.</param>
+        /// <param name="startRegister">The first register to begin writing.</param>
+        /// <param name="values">The coil values to write.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        Task WriteMultipleCoils(byte modbusAddress, ushort startRegister, IEnumerable<bool> values);
+
+        /// <summary>
+        /// Reads the requested number of coils from a device.
+        /// </summary>
+        /// <param name="modbusAddress">The Modbus address of the device.</param>
+        /// <param name="startCoil">The first coil to begin reading.</param>
+        /// <param name="coilCount">The number of coils to read.</param>
+        /// <returns>An array of coil values read from the device.</returns>
         Task<bool[]> ReadCoils(byte modbusAddress, ushort startCoil, int coilCount);
     }
 }

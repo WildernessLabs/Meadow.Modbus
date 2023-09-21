@@ -4,30 +4,42 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus;
 
-public class CrcException : Exception
-{
-    internal CrcException()
-        : base("CRC Failure")
-    {
-    }
-}
-
+/// <summary>
+/// Modbus RTU client implementation.
+/// </summary>
 public class ModbusRtuClient : ModbusClientBase
 {
     private const int HEADER_DATA_OFFSET = 4;
 
     private ISerialPort _port;
     private IDigitalOutputPort? _enable;
-    private double _byteTime;
 
+    /// <summary>
+    /// Gets the name of the port used by the Modbus RTU client.
+    /// </summary>
     public string PortName => _port.PortName;
 
+    /// <summary>
+    /// Gets or sets the action to be executed after the port is opened.
+    /// </summary>
+    protected Action? PostOpenAction { get; set; } = null;
+    /// <summary>
+    /// Gets or sets the action to be executed after a write delay.
+    /// </summary>
+    protected Action<byte[]>? PostWriteDelayAction { get; set; } = null;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusRtuClient"/> class.
+    /// </summary>
+    /// <param name="port">The serial port to use for communication.</param>
+    /// <param name="enablePort">The optional digital output port for enabling communication.</param>
     public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
     {
         _port = port;
         _enable = enablePort;
     }
 
+    /// <inheritdoc/>
     protected override void DisposeManagedResources()
     {
         _port?.Dispose();
@@ -41,9 +53,7 @@ public class ModbusRtuClient : ModbusClientBase
         }
     }
 
-    protected Action? PostOpenAction { get; set; } = null;
-    protected Action<byte[]>? PostWriteDelayAction { get; set; } = null;
-
+    /// <inheritdoc/>
     public override Task Connect()
     {
         SetEnable(false);
@@ -56,18 +66,18 @@ public class ModbusRtuClient : ModbusClientBase
             PostOpenAction?.Invoke();
         }
 
-        _byteTime = (1d / _port.BaudRate) * _port.DataBits * 1000d;
-
         IsConnected = true;
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
     public override void Disconnect()
     {
         _port?.Close();
         IsConnected = false;
     }
 
+    /// <inheritdoc/>
     protected override async Task<byte[]> ReadResult(ModbusFunction function)
     {
         // the response must be at least 5 bytes, so wait for at least that much to come in
@@ -97,6 +107,7 @@ public class ModbusRtuClient : ModbusClientBase
         {
             case ModbusFunction.WriteMultipleRegisters:
             case ModbusFunction.WriteMultipleCoils:
+            case ModbusFunction.WriteCoil:
                 bufferLen = 8; //fixed length
                 resultLen = 0; //no result data
                 break;
@@ -126,7 +137,7 @@ public class ModbusRtuClient : ModbusClientBase
         }
 
         // do a CRC on all but the last 2 bytes, then see if that matches the last 2
-        var expectedCrc = Crc(buffer, 0, buffer.Length - 2);
+        var expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
         var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
         if (expectedCrc != actualCrc) { throw new CrcException(); }
 
@@ -141,6 +152,7 @@ public class ModbusRtuClient : ModbusClientBase
         return await Task.FromResult(result);
     }
 
+    /// <inheritdoc/>
     protected override Task DeliverMessage(byte[] message)
     {
         SetEnable(true);
@@ -156,6 +168,7 @@ public class ModbusRtuClient : ModbusClientBase
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
     protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
     {
         if (registerCount > ushort.MaxValue) throw new ArgumentException();
@@ -169,12 +182,13 @@ public class ModbusRtuClient : ModbusClientBase
         message[4] = (byte)(registerCount >> 8);
         message[5] = (byte)registerCount;
 
-        FillCRC(message);
+        RtuHelpers.FillCRC(message);
 
         return message;
 
     }
 
+    /// <inheritdoc/>
     protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
     {
         byte[] message;
@@ -183,6 +197,8 @@ public class ModbusRtuClient : ModbusClientBase
         switch (function)
         {
             case ModbusFunction.WriteMultipleCoils:
+                message = new byte[4 + data.Length + 2]; // header + length + crc
+                break;
             case ModbusFunction.WriteMultipleRegisters:
                 message = new byte[4 + data.Length + 5]; // header + length + data + crc
                 break;
@@ -199,6 +215,7 @@ public class ModbusRtuClient : ModbusClientBase
         switch (function)
         {
             case ModbusFunction.WriteMultipleCoils:
+                break;
             case ModbusFunction.WriteMultipleRegisters:
                 var registers = (ushort)(data.Length / 2);
                 message[4] = (byte)(registers >> 8);
@@ -210,39 +227,8 @@ public class ModbusRtuClient : ModbusClientBase
 
         Array.Copy(data, 0, message, offset, data.Length);
 
-        FillCRC(message);
+        RtuHelpers.FillCRC(message);
 
         return message;
-    }
-
-    private ushort Crc(byte[] data, int index, int count)
-    {
-        ushort crc = 0xFFFF;
-        char lsb;
-
-        for (int i = index; i < count; i++)
-        {
-            crc = (ushort)(crc ^ data[i]);
-
-            for (int j = 0; j < 8; j++)
-            {
-                lsb = (char)(crc & 0x0001);
-                crc = (ushort)((crc >> 1) & 0x7fff);
-
-                if (lsb == 1)
-                    crc = (ushort)(crc ^ 0xa001);
-            }
-        }
-
-        return crc;
-    }
-
-    private void FillCRC(byte[] message)
-    {
-        var crc = Crc(message, 0, message.Length - 2);
-
-        // fill in the CRC (last 2 bytes) - big-endian
-        message[message.Length - 1] = (byte)((crc >> 8) & 0xff);
-        message[message.Length - 2] = (byte)(crc & 0xff);
     }
 }
