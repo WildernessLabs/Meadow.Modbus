@@ -40,6 +40,21 @@ internal class RtuResponse
         return new RtuResponse(data);
     }
 
+    public static RtuResponse CreateWriteResponse(ModbusFunction function, byte modbusAddress, ushort startRegister, ushort writeResult, ModbusWriteResult mwr)
+    {
+        var data = new byte[8];
+        data[0] = modbusAddress;
+        data[1] = (byte)function;
+        data[2] = (byte)(startRegister >> 8);
+        data[3] = (byte)(startRegister & 0xff);
+        data[4] = (byte)(writeResult >> 8);
+        data[5] = (byte)(writeResult & 0xff);
+
+        RtuHelpers.FillCRC(data);
+
+        return new RtuResponse(data);
+    }
+
     public byte[] Serialize()
     {
         return m_data;

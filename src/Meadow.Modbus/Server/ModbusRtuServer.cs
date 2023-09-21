@@ -78,6 +78,8 @@ public class ModbusRtuServer : IModbusServer
             function = (ModbusFunction)buffer[1];
             ushort expectedCrc;
             ushort actualCrc;
+            ushort? startRegister = default;
+            ushort? writeValue = default;
 
             switch (function)
             {
@@ -148,16 +150,57 @@ public class ModbusRtuServer : IModbusServer
                     }
                     else
                     {
-                        result = WriteRegisterRequest(
+                        startRegister = (ushort)((buffer[2] << 8) | buffer[3]);
+                        writeValue = (ushort)((buffer[4] << 8) | buffer[5]);
+
+                        result = WriteRegisterRequest?.Invoke(
                         buffer[0],
-                        (ushort)((buffer[2] << 8) | buffer[3]),
+                        startRegister.Value,
                         new ushort[]
                         {
-                            (ushort)((buffer[4] << 8) | buffer[5]),
+                            writeValue.Value,
                         });
                     }
                     break;
                 case ModbusFunction.WriteMultipleRegisters:
+                    // get the length
+                    while (read < 7)
+                    {
+                        read += _port.Read(buffer, read, 7 - read);
+                    }
+
+                    var registerCount = (ushort)((buffer[4] << 8) | buffer[5]);
+                    var totalLength = 7 + (registerCount * 2) + 2;
+                    while (read < totalLength)
+                    {
+                        read += _port.Read(buffer, read, totalLength - 7);
+                    }
+
+                    expectedCrc = RtuHelpers.Crc(buffer, 0, totalLength - 2);
+                    actualCrc = (ushort)(buffer[totalLength - 2] | buffer[totalLength - 1] << 8);
+
+                    if (expectedCrc != actualCrc)
+                    {
+                        // the spec says if there's a CRC error, the server will do nothing (not respond)
+                        CrcErrorDetected?.Invoke(this, EventArgs.Empty);
+                        result = null;
+                    }
+                    else
+                    {
+                        startRegister = (ushort)((buffer[2] << 8) | buffer[3]);
+                        writeValue = registerCount;
+
+                        var registers = new ushort[registerCount];
+                        for (var r = 0; r < registerCount; r++)
+                        {
+                            registers[r] = (ushort)((buffer[r * 2 + 7] << 8) | buffer[r * 2 + 8]);
+                        }
+
+                        result = WriteRegisterRequest?.Invoke(
+                            buffer[0],
+                            startRegister.Value,
+                            registers);
+                    }
                     break;
                 default:
                     result = new ModbusErrorResult(ModbusErrorCode.IllegalFunction);
@@ -167,6 +210,10 @@ public class ModbusRtuServer : IModbusServer
             if (result is ModbusReadResult mrr)
             {
                 response = RtuResponse.CreateReadResponse(function, modbusAddress, mrr);
+            }
+            if (result is ModbusWriteResult mwr)
+            {
+                response = RtuResponse.CreateWriteResponse(function, modbusAddress, startRegister!.Value, writeValue!.Value, mwr);
             }
             else if (result is ModbusErrorResult mer)
             {
