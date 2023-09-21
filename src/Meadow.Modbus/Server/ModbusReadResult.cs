@@ -3,10 +3,20 @@ using System.Net;
 
 namespace Meadow.Modbus;
 
+/// <summary>
+/// Represents a Modbus read result.
+/// </summary>
 public sealed class ModbusReadResult : IModbusResult
 {
+    /// <summary>
+    /// Gets the data associated with the read result.
+    /// </summary>
     public byte[] Data { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusReadResult"/> class with coil data.
+    /// </summary>
+    /// <param name="coilData">The coil data.</param>
     public ModbusReadResult(bool[] coilData)
     {
         Data = new byte[coilData.Length / 8 + ((coilData.Length % 8 != 0) ? 1 : 0)];
@@ -37,6 +47,10 @@ public sealed class ModbusReadResult : IModbusResult
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusReadResult"/> class with ushort register data.
+    /// </summary>
+    /// <param name="registerData">The ushort register data.</param>
     public ModbusReadResult(ushort[] registerData)
     {
         Data = new byte[registerData.Length * 2];
@@ -50,6 +64,10 @@ public sealed class ModbusReadResult : IModbusResult
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusReadResult"/> class with short register data.
+    /// </summary>
+    /// <param name="registerData">The short register data.</param>
     public ModbusReadResult(short[] registerData)
     {
         Data = new byte[registerData.Length * 2];
@@ -63,6 +81,10 @@ public sealed class ModbusReadResult : IModbusResult
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusReadResult"/> class with the provided data.
+    /// </summary>
+    /// <param name="data">The data associated with the read result.</param>
     public ModbusReadResult(byte[] data)
     {
         Data = data;

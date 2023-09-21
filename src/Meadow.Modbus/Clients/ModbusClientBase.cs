@@ -225,6 +225,7 @@ namespace Meadow.Modbus
             return registers;
         }
 
+        /// <inheritdoc/>
         public async Task WriteCoil(byte modbusAddress, ushort register, bool value)
         {
             var data = value ? new byte[] { 0xff, 0x00 } : new byte[] { 0x00, 0x00 };
@@ -243,6 +244,7 @@ namespace Meadow.Modbus
             }
         }
 
+        /// <inheritdoc/>
         public async Task WriteMultipleCoils(byte modbusAddress, ushort startRegister, IEnumerable<bool> values)
         {
             // Reduce bool value list to 8 bit byte array
@@ -274,6 +276,7 @@ namespace Meadow.Modbus
             }
         }
 
+        /// <inheritdoc/>
         public async Task<bool[]> ReadCoils(byte modbusAddress, ushort startCoil, int coilCount)
         {
             if (coilCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} coils can be retrieved at one time");

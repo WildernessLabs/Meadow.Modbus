@@ -3,6 +3,9 @@ using System;
 
 namespace Meadow.Modbus;
 
+/// <summary>
+/// Represents a shim for the serial port implementation, providing an interface for Modbus communication.
+/// </summary>
 public class SerialPortShim : ISerialPort, IDisposable
 {
     /// <inheritdoc/>
@@ -12,6 +15,8 @@ public class SerialPortShim : ISerialPort, IDisposable
 
     private System.IO.Ports.SerialPort _port;
 
+
+    /// <inheritdoc/>
     public bool IsDisposed { get; private set; }
 
     /// <inheritdoc/>
@@ -47,11 +52,23 @@ public class SerialPortShim : ISerialPort, IDisposable
         set => _port.StopBits = (System.IO.Ports.StopBits)value;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SerialPortShim"/> class using an existing serial port instance.
+    /// </summary>
+    /// <param name="port">The existing serial port instance to use.</param>
     public SerialPortShim(System.IO.Ports.SerialPort port)
     {
         _port = port;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SerialPortShim"/> class with specified parameters.
+    /// </summary>
+    /// <param name="portName">The name of the serial port (e.g., "COM1").</param>
+    /// <param name="baudRate">The baud rate for communication.</param>
+    /// <param name="parity">The parity setting for communication.</param>
+    /// <param name="dataBits">The data bits setting for communication.</param>
+    /// <param name="stopBits">The stop bits setting for communication.</param>
     public SerialPortShim(string portName, int baudRate, Parity parity, int dataBits, StopBits stopBits)
     {
         _port = new System.IO.Ports.SerialPort(portName, baudRate, (System.IO.Ports.Parity)parity, dataBits, (System.IO.Ports.StopBits)stopBits + 1);

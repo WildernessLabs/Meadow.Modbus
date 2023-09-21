@@ -4,30 +4,42 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus;
 
-public class CrcException : Exception
-{
-    internal CrcException()
-        : base("CRC Failure")
-    {
-    }
-}
-
+/// <summary>
+/// Modbus RTU client implementation.
+/// </summary>
 public class ModbusRtuClient : ModbusClientBase
 {
     private const int HEADER_DATA_OFFSET = 4;
 
     private ISerialPort _port;
     private IDigitalOutputPort? _enable;
-    private double _byteTime;
 
+    /// <summary>
+    /// Gets the name of the port used by the Modbus RTU client.
+    /// </summary>
     public string PortName => _port.PortName;
 
+    /// <summary>
+    /// Gets or sets the action to be executed after the port is opened.
+    /// </summary>
+    protected Action? PostOpenAction { get; set; } = null;
+    /// <summary>
+    /// Gets or sets the action to be executed after a write delay.
+    /// </summary>
+    protected Action<byte[]>? PostWriteDelayAction { get; set; } = null;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusRtuClient"/> class.
+    /// </summary>
+    /// <param name="port">The serial port to use for communication.</param>
+    /// <param name="enablePort">The optional digital output port for enabling communication.</param>
     public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
     {
         _port = port;
         _enable = enablePort;
     }
 
+    /// <inheritdoc/>
     protected override void DisposeManagedResources()
     {
         _port?.Dispose();
@@ -41,9 +53,7 @@ public class ModbusRtuClient : ModbusClientBase
         }
     }
 
-    protected Action? PostOpenAction { get; set; } = null;
-    protected Action<byte[]>? PostWriteDelayAction { get; set; } = null;
-
+    /// <inheritdoc/>
     public override Task Connect()
     {
         SetEnable(false);
@@ -56,18 +66,18 @@ public class ModbusRtuClient : ModbusClientBase
             PostOpenAction?.Invoke();
         }
 
-        _byteTime = (1d / _port.BaudRate) * _port.DataBits * 1000d;
-
         IsConnected = true;
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
     public override void Disconnect()
     {
         _port?.Close();
         IsConnected = false;
     }
 
+    /// <inheritdoc/>
     protected override async Task<byte[]> ReadResult(ModbusFunction function)
     {
         // the response must be at least 5 bytes, so wait for at least that much to come in
@@ -142,6 +152,7 @@ public class ModbusRtuClient : ModbusClientBase
         return await Task.FromResult(result);
     }
 
+    /// <inheritdoc/>
     protected override Task DeliverMessage(byte[] message)
     {
         SetEnable(true);
@@ -157,6 +168,7 @@ public class ModbusRtuClient : ModbusClientBase
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
     protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
     {
         if (registerCount > ushort.MaxValue) throw new ArgumentException();
@@ -176,6 +188,7 @@ public class ModbusRtuClient : ModbusClientBase
 
     }
 
+    /// <inheritdoc/>
     protected override byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data)
     {
         byte[] message;

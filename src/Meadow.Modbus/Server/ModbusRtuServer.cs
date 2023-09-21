@@ -9,26 +9,42 @@ public class ModbusRtuServer : IModbusServer
     private ISerialPort _port;
     private bool _signalStop;
 
-    public bool IsDisposed { get; private set; }
-
-    public event ReadDelegate? ReadCoilRequest;
-    public event ReadDelegate? ReadDiscreteRequest;
-    public event ReadDelegate? ReadHoldingRegisterRequest;
-    public event ReadDelegate? ReadInputRegisterRequest;
-    public event WriteCoilDelegate? WriteCoilRequest;
+    /// <inheritdoc/>
+    public event ReadDelegate? ReadCoilRequest = default!;
+    /// <inheritdoc/>
+    public event ReadDelegate? ReadDiscreteRequest = default!;
+    /// <inheritdoc/>
+    public event ReadDelegate? ReadHoldingRegisterRequest = default!;
+    /// <inheritdoc/>
+    public event ReadDelegate? ReadInputRegisterRequest = default!;
+    /// <inheritdoc/>
+    public event WriteCoilDelegate? WriteCoilRequest = default!;
+    /// <inheritdoc/>
     public event WriteRegisterDelegate? WriteRegisterRequest;
+    /// <summary>
+    /// Event that is raised when a CRC (Cyclic Redundancy Check) error is detected.
+    /// </summary>
     public event EventHandler? CrcErrorDetected;
 
+    /// <inheritdoc/>
+    public bool IsDisposed { get; private set; }
+
+    /// <inheritdoc/>
     public bool IsRunning
     {
         get { return _port.IsOpen; }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusRtuServer"/> class using the specified serial port.
+    /// </summary>
+    /// <param name="serverPort">The serial port to use for communication.</param>
     public ModbusRtuServer(ISerialPort serverPort)
     {
         _port = serverPort;
     }
 
+    /// <inheritdoc/>
     public void Start()
     {
         if (!IsRunning)
@@ -38,6 +54,7 @@ public class ModbusRtuServer : IModbusServer
         }
     }
 
+    /// <inheritdoc/>
     public void Stop()
     {
         if (IsRunning)
@@ -230,28 +247,21 @@ public class ModbusRtuServer : IModbusServer
         _port.Close();
     }
 
+    /// <inheritdoc/>
     protected virtual void Dispose(bool disposing)
     {
         if (!IsDisposed)
         {
             if (disposing)
             {
-                // TODO: dispose managed state (managed objects)
+                _port.Dispose();
             }
 
-            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            // TODO: set large fields to null
             IsDisposed = true;
         }
     }
 
-    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-    // ~ModbusRtuServer()
-    // {
-    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    //     Dispose(disposing: false);
-    // }
-
+    /// <inheritdoc/>
     public void Dispose()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
