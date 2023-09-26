@@ -259,7 +259,7 @@ public class ModbusTcpServer : IModbusServer, IDisposable
                     }
                     else
                     {
-                        Console.WriteLine($"MODBUS NULL RESPONSE");
+                        Resolver.Log.Info($"MODBUS NULL RESPONSE");
                     }
 
                     bufferOffset = 0;

@@ -34,7 +34,7 @@ namespace Meadow.Modbus
         public event EventHandler Connected = delegate { };
 
         private bool _connected;
-        private SemaphoreSlim _syncRoot = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _syncRoot = new SemaphoreSlim(1, 1);
 
         public bool IsDisposed { get; private set; }
 
@@ -268,7 +268,7 @@ namespace Meadow.Modbus
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"WriteMultipleCoils Exception [{ex.Message}]");
+                Resolver.Log.Info($"WriteMultipleCoils Exception [{ex.Message}]");
             }
             finally
             {
