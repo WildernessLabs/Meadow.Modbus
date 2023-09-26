@@ -13,8 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meadow.Modbus.Unit.Tests", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_refs", "_refs", "{F3A19D25-32FB-4420-B50D-220C86E5F8A0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meadow.Contracts", "..\..\Meadow.Contracts\Source\Meadow.Contracts\Meadow.Contracts.csproj", "{B2CE678E-2C35-490E-B311-8401567D8ABA}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,18 +27,11 @@ Global
 		{E6F3EFB2-C8E9-4F7B-826D-79DC3AB5BDD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E6F3EFB2-C8E9-4F7B-826D-79DC3AB5BDD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E6F3EFB2-C8E9-4F7B-826D-79DC3AB5BDD2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{B2CE678E-2C35-490E-B311-8401567D8ABA} = {F3A19D25-32FB-4420-B50D-220C86E5F8A0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5FCB68E9-82F3-44F9-BF93-D9A8F55D7F9E}
