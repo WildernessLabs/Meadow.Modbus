@@ -58,7 +58,7 @@ namespace Meadow.Modbus.Unit.Tests
             throw new NotImplementedException();
         }
 
-        public int ReadAll(byte[] buffer)
+        public byte[] ReadAll()
         {
             throw new NotImplementedException();
         }

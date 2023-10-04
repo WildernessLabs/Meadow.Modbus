@@ -21,9 +21,9 @@ namespace Meadow.Modbus.Unit.Tests
             using (var server = new ModbusTcpServer(502))
             using (var client = new ModbusTcpClient("127.0.0.1"))
             {
-                server.WriteRegisterRequest += (address, data) =>
+                server.WriteRegisterRequest += (address, register, data) =>
                 {
-                    Assert.Equal(testRegisterAddress, address);
+                    Assert.Equal(testRegisterAddress, register);
                     Assert.Equal(testData.Length, data.Length);
                     Assert.Equal(testData[0], data[0]);
                     callbackOccurred = true;
@@ -60,9 +60,9 @@ namespace Meadow.Modbus.Unit.Tests
             using (var server = new ModbusTcpServer(502))
             using (var client = new ModbusTcpClient("127.0.0.1"))
             {
-                server.ReadHoldingRegisterRequest += (address, length) =>
+                server.ReadHoldingRegisterRequest += (address, register, length) =>
                 {
-                    Assert.Equal(testRegisterAddress, address);
+                    Assert.Equal(testRegisterAddress, register);
                     Assert.Equal(testData.Length, length);
 
                     testData[0] = (ushort)r.Next(ushort.MaxValue);
@@ -100,9 +100,9 @@ namespace Meadow.Modbus.Unit.Tests
             using (var server = new ModbusTcpServer(502))
             using (var client = new ModbusTcpClient("127.0.0.1"))
             {
-                server.ReadHoldingRegisterRequest += (address, length) =>
+                server.ReadHoldingRegisterRequest += (address, register, length) =>
                 {
-                    Assert.Equal(testRegisterAddress, address);
+                    Assert.Equal(testRegisterAddress, register);
 
                     // generate some new random data
                     testData = new ushort[length];
@@ -149,9 +149,9 @@ namespace Meadow.Modbus.Unit.Tests
             using (var server = new ModbusTcpServer(502))
             using (var client = new ModbusTcpClient("127.0.0.1"))
             {
-                server.WriteCoilRequest += (address, data) =>
+                server.WriteCoilRequest += (address, register, data) =>
                 {
-                    Assert.Equal(testRegisterAddress, address);
+                    Assert.Equal(testRegisterAddress, register);
                     Assert.Equal(testData.Length, data.Length);
                     Assert.Equal(testData[0], data[0]);
                     callbackOccurred = true;
@@ -188,9 +188,9 @@ namespace Meadow.Modbus.Unit.Tests
             using (var server = new ModbusTcpServer(502))
             using (var client = new ModbusTcpClient("127.0.0.1"))
             {
-                server.ReadCoilRequest += (address, count) =>
+                server.ReadCoilRequest += (address, register, count) =>
                 {
-                    Assert.Equal(testRegisterAddress, address);
+                    Assert.Equal(testRegisterAddress, register);
 
                     // generate some new random data
                     testData = new bool[count];
@@ -237,9 +237,9 @@ namespace Meadow.Modbus.Unit.Tests
             using (var server = new ModbusTcpServer(502))
             using (var client = new ModbusTcpClient("127.0.0.1"))
             {
-                server.ReadInputRegisterRequest += (address, count) =>
+                server.ReadInputRegisterRequest += (address, register, count) =>
                 {
-                    Assert.Equal(testRegisterAddress, address);
+                    Assert.Equal(testRegisterAddress, register);
 
                     // generate some new random data - the request is for registers, which are ushorts
                     testData = new ushort[count];

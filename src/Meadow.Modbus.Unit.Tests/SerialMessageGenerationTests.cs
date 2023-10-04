@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Meadow.Modbus.Unit.Tests
@@ -56,13 +57,13 @@ namespace Meadow.Modbus.Unit.Tests
             {
                 await client.WriteCoil(1, 7, true);
             }
-            catch(TimeoutException)
+            catch (TimeoutException)
             {
                 // NOP - expected
             }
 
             // valid output from a known-good RTU sender
-            var expected = new byte[] { 0x01, 0x05, 0x00, 0x07, 0xff, 0xff, 0x7d, 0xbb };
+            var expected = new byte[] { 0x01, 0x05, 0x00, 0x07, 0xff, 0x00, 0x3d, 0xfb };
 
             Assert.Equal(expected, port.OutputBuffer);
         }
@@ -84,6 +85,27 @@ namespace Meadow.Modbus.Unit.Tests
 
             // valid output from a known-good RTU sender
             var expected = new byte[] { 0x11, 0x01, 0x00, 0x0d, 0x00, 0x07, 0xee, 0x9b };
+
+            Assert.Equal(expected, port.OutputBuffer);
+        }
+
+        [Fact]
+        public async void TestFunction7Generation()
+        {
+            var port = new MockSerialPort();
+            var client = new ModbusRtuClient(port);
+
+            try
+            {
+                await client.WriteMultipleCoils(17, 19, new List<bool> { true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true });
+            }
+            catch (TimeoutException)
+            {
+                // NOP - expected
+            }
+
+            // valid output from a known-good RTU sender
+            var expected = new byte[] { 0x11, 0x0F, 0x00, 0x13, 0x00, 0x11, 0x03, 0x55, 0x55, 0x01, 0x51, 0xA1 };
 
             Assert.Equal(expected, port.OutputBuffer);
         }

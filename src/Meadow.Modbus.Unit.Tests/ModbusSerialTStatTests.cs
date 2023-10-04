@@ -3,166 +3,165 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Meadow.Modbus.Unit.Tests
+namespace Meadow.Modbus.Unit.Tests;
+
+public class ModbusSerialTStatTests
 {
-    public class ModbusSerialTStatTests
+    // this class assumes a connected serial Temco Controls TSTAT7 or TSTAT8
+    [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
+    public async void MultipleReadHoldingRegisterTest()
     {
-        // this class assumes a connected serial Temco Controls TSTAT7 or TSTAT8
-        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
-        public async void MultipleReadHoldingRegisterTest()
+        using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
         {
-            using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
+            port.ReadTimeout = TimeSpan.FromSeconds(15);
+            port.Open();
+
+            byte address = 201;
+            ushort setpointRegister = 40346;
+            ushort tempRegister = 40122;
+            var readCount = 10;
+
+            var client = new ModbusRtuClient(port);
+
+            for (ushort i = 0; i < readCount; i++)
             {
-                port.ReadTimeout = TimeSpan.FromSeconds(15);
-                port.Open();
+                Debug.WriteLine("<--");
+                var setpoint = await client.ReadHoldingRegisters(address, setpointRegister, 1);
+                var temp = await client.ReadHoldingRegisters(address, tempRegister, 1);
+                await Task.Delay(1000);
+            }
+        }
+    }
 
-                byte address = 201;
-                ushort setpointRegister = 40346;
-                ushort tempRegister = 40122;
-                var readCount = 10;
+    [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
+    public async void MultipleWriteHoldingRegisterTest()
+    {
+        using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
+        {
+            port.ReadTimeout = TimeSpan.FromSeconds(15);
+            port.Open();
 
-                var client = new ModbusRtuClient(port);
+            byte address = 201;
+            ushort startRegister = 345; // occupied setpoint, in tenths of a degree
+            var writeCount = 10;
+            ushort startValue = 610;
 
-                for (ushort i = 0; i < readCount; i++)
+            var client = new ModbusRtuClient(port);
+
+            for (ushort i = 0; i < writeCount; i++)
+            {
+                Debug.WriteLine("-->");
+                await client.WriteHoldingRegister(address, startRegister, startValue);
+                startValue += 10;
+                await Task.Delay(1000);
+            }
+        }
+    }
+
+    [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
+    public async void OverlappingAccessTest()
+    {
+        using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
+        {
+            port.ReadTimeout = TimeSpan.FromSeconds(15);
+            port.Open();
+
+            byte address = 201;
+            ushort setpointRegister = 40346;
+            ushort tempRegister = 40122;
+
+            var run = true;
+
+            var client = new ModbusRtuClient(port);
+
+            var reader = Task.Run(async () =>
+            {
+                while (run)
                 {
                     Debug.WriteLine("<--");
                     var setpoint = await client.ReadHoldingRegisters(address, setpointRegister, 1);
                     var temp = await client.ReadHoldingRegisters(address, tempRegister, 1);
                     await Task.Delay(1000);
                 }
-            }
-        }
+            });
 
-        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
-        public async void MultipleWriteHoldingRegisterTest()
-        {
-            using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
+            var writer = Task.Run(async () =>
             {
-                port.ReadTimeout = TimeSpan.FromSeconds(15);
-                port.Open();
+                ushort sp = 600;
 
-                byte address = 201;
-                ushort startRegister = 345; // occupied setpoint, in tenths of a degree
-                var writeCount = 10;
-                ushort startValue = 610;
-
-                var client = new ModbusRtuClient(port);
-
-                for (ushort i = 0; i < writeCount; i++)
+                for (int i = 0; i < 10; i++)
                 {
                     Debug.WriteLine("-->");
-                    await client.WriteHoldingRegister(address, startRegister, startValue);
-                    startValue += 10;
-                    await Task.Delay(1000);
+                    await client.WriteHoldingRegister(address, setpointRegister, sp);
+                    sp += 10;
+                    await Task.Delay(700);
                 }
+
+                run = false;
+            });
+
+
+            while (run)
+            {
+                await Task.Delay(1000);
             }
         }
+    }
 
-        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
-        public async void OverlappingAccessTest()
+    [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
+    public async void ReadHoldingRegisterTest()
+    {
+        using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
         {
-            using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
+            port.ReadTimeout = TimeSpan.FromSeconds(15);
+            port.Open();
+
+            byte address = 201;
+            ushort startRegister = 1;
+            var readCount = 1;
+
+            var client = new ModbusRtuClient(port);
             {
-                port.ReadTimeout = TimeSpan.FromSeconds(15);
-                port.Open();
+                // force meadow to compile the serial stuff
+            };
 
-                byte address = 201;
-                ushort setpointRegister = 40346;
-                ushort tempRegister = 40122;
+            var r1 = await client.ReadHoldingRegisters(address, startRegister, readCount);
+            Assert.Equal(readCount, r1.Length);
 
-                var run = true;
+            readCount = 2;
+            var r2 = await client.ReadHoldingRegisters(address, startRegister, readCount);
+            Assert.Equal(readCount, r2.Length);
 
-                var client = new ModbusRtuClient(port);
-
-                var reader = Task.Run(async () =>
-                {
-                    while (run)
-                    {
-                        Debug.WriteLine("<--");
-                        var setpoint = await client.ReadHoldingRegisters(address, setpointRegister, 1);
-                        var temp = await client.ReadHoldingRegisters(address, tempRegister, 1);
-                        await Task.Delay(1000);
-                    }
-                });
-
-                var writer = Task.Run(async () =>
-                {
-                    ushort sp = 600;
-
-                    for (int i = 0; i < 10; i++)
-                    {
-                        Debug.WriteLine("-->");
-                        await client.WriteHoldingRegister(address, setpointRegister, sp);
-                        sp += 10;
-                        await Task.Delay(700);
-                    }
-
-                    run = false;
-                });
-
-
-                while (run)
-                {
-                    await Task.Delay(1000);
-                }
-            }
+            Assert.Equal(r1[0], r2[0]);
         }
+    }
 
-        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
-        public async void ReadHoldingRegisterTest()
+    [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
+    public async void ReadWriteHoldingRegisterTest()
+    {
+        using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
         {
-            using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
-            {
-                port.ReadTimeout = TimeSpan.FromSeconds(15);
-                port.Open();
+            port.ReadTimeout = TimeSpan.FromSeconds(15);
+            port.Open();
 
-                byte address = 201;
-                ushort startRegister = 1;
-                var readCount = 1;
+            byte address = 201;
+            ushort startRegister = 345; // occupied setpoint, in tenths of a degree
+            var readCount = 1;
 
-                var client = new ModbusRtuClient(port);
-                {
-                    // force meadow to compile the serial stuff
-                };
+            var client = new ModbusRtuClient(port);
+            var setpoint = await client.ReadHoldingRegisters(address, startRegister, readCount);
 
-                var r1 = await client.ReadHoldingRegisters(address, startRegister, readCount);
-                Assert.Equal(readCount, r1.Length);
+            // TODO: verify it's reasonable?
 
-                readCount = 2;
-                var r2 = await client.ReadHoldingRegisters(address, startRegister, readCount);
-                Assert.Equal(readCount, r2.Length);
+            // add or subtract some random amount
+            var r = new Random();
+            var delta = r.Next(-20, 20);
+            var newSetpoint = (ushort)(setpoint[0] + delta);
 
-                Assert.Equal(r1[0], r2[0]);
-            }
-        }
+            await client.WriteHoldingRegister(address, startRegister, newSetpoint);
+            var verifySetpoint = await client.ReadHoldingRegisters(address, startRegister, readCount);
 
-        [Fact(Skip = "Requires a connected TSTAT8 over RS485")]
-        public async void ReadWriteHoldingRegisterTest()
-        {
-            using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
-            {
-                port.ReadTimeout = TimeSpan.FromSeconds(15);
-                port.Open();
-
-                byte address = 201;
-                ushort startRegister = 345; // occupied setpoint, in tenths of a degree
-                var readCount = 1;
-
-                var client = new ModbusRtuClient(port);
-                var setpoint = await client.ReadHoldingRegisters(address, startRegister, readCount);
-
-                // TODO: verify it's reasonable?
-
-                // add or subtract some random amount
-                var r = new Random();
-                var delta = r.Next(-20, 20);
-                var newSetpoint = (ushort)(setpoint[0] + delta);
-
-                await client.WriteHoldingRegister(address, startRegister, newSetpoint);
-                var verifySetpoint = await client.ReadHoldingRegisters(address, startRegister, readCount);
-
-                Assert.Equal(newSetpoint, verifySetpoint[0]);
-            }
+            Assert.Equal(newSetpoint, verifySetpoint[0]);
         }
     }
 }
