@@ -4,11 +4,15 @@ using System.Threading;
 
 namespace Meadow.Modbus;
 
+/// <summary>
+/// Represents RTU server.
+/// </summary>
 public class ModbusRtuServer : IModbusServer
 {
     private ISerialPort _port;
     private bool _signalStop;
 
+#pragma warning disable 414 // disable "assigned but never used" warning for events not yet supported by the RTU server
     /// <inheritdoc/>
     public event ReadDelegate? ReadCoilRequest = default!;
     /// <inheritdoc/>
@@ -25,6 +29,7 @@ public class ModbusRtuServer : IModbusServer
     /// Event that is raised when a CRC (Cyclic Redundancy Check) error is detected.
     /// </summary>
     public event EventHandler? CrcErrorDetected;
+#pragma warning restore 414
 
     /// <inheritdoc/>
     public bool IsDisposed { get; private set; }
