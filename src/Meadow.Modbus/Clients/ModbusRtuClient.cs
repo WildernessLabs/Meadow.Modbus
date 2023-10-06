@@ -82,6 +82,9 @@ public class ModbusRtuClient : ModbusClientBase
     {
         // the response must be at least 5 bytes, so wait for at least that much to come in
         var t = 0;
+        ushort expectedCrc;
+        ushort actualCrc;
+
         while (_port.BytesToRead < 5)
         {
             await Task.Delay(10);
@@ -97,8 +100,31 @@ public class ModbusRtuClient : ModbusClientBase
 
         var header = new byte[headerLen];
 
-        // read header to determine result length
-        _port.Read(header, 0, header.Length);
+        // first read 3 bytes so we can look for an error
+        _port.Read(header, 0, 3);
+
+        // check for an error bit (MSB in byte 2)
+        if ((header[1] & 0x80) != 0)
+        {
+            // an error response has come back - read the remaining 2 bytes (CRC of the error)
+            var errpacket = new byte[5];
+            Array.Copy(header, 0, errpacket, 0, 3);
+            _port.Read(errpacket, 3, 2);
+
+            expectedCrc = RtuHelpers.Crc(errpacket, 0, errpacket.Length - 2);
+            actualCrc = (ushort)(errpacket[errpacket.Length - 2] | errpacket[errpacket.Length - 1] << 8);
+            if (expectedCrc != actualCrc) { throw new CrcException(); }
+
+            var errorCode = (ModbusErrorCode)errpacket[2];
+
+            throw new ModbusException(errorCode, function);
+        }
+
+        // read the remainder of the header
+        if (headerLen > 3)
+        {
+            _port.Read(header, 3, headerLen - 3);
+        }
 
         int bufferLen;
         int resultLen;
@@ -137,8 +163,8 @@ public class ModbusRtuClient : ModbusClientBase
         }
 
         // do a CRC on all but the last 2 bytes, then see if that matches the last 2
-        var expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
-        var actualCrc = buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8;
+        expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
+        actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
         if (expectedCrc != actualCrc) { throw new CrcException(); }
 
         if (resultLen == 0)
