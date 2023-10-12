@@ -101,7 +101,11 @@ public class ModbusRtuClient : ModbusClientBase
         var header = new byte[headerLen];
 
         // first read 3 bytes so we can look for an error
-        _port.Read(header, 0, 3);
+        var read = 0;
+        while (read < 3)
+        {
+            read += _port.Read(header, read, 3 - read);
+        }
 
         // check for an error bit (MSB in byte 2)
         if ((header[1] & 0x80) != 0)
@@ -109,13 +113,21 @@ public class ModbusRtuClient : ModbusClientBase
             // an error response has come back - read the remaining 2 bytes (CRC of the error)
             var errpacket = new byte[5];
             Array.Copy(header, 0, errpacket, 0, 3);
-            _port.Read(errpacket, 3, 2);
+
+            read = 0;
+            while (read < 2)
+            {
+                _port.Read(errpacket, 3 + read, 2 - read);
+            }
+
+            var errorCode = (ModbusErrorCode)errpacket[2];
 
             expectedCrc = RtuHelpers.Crc(errpacket, 0, errpacket.Length - 2);
             actualCrc = (ushort)(errpacket[errpacket.Length - 2] | errpacket[errpacket.Length - 1] << 8);
-            if (expectedCrc != actualCrc) { throw new CrcException(); }
-
-            var errorCode = (ModbusErrorCode)errpacket[2];
+            if (expectedCrc != actualCrc)
+            {
+                throw new CrcException($"CRC error in {errorCode} message", expectedCrc, actualCrc, errpacket);
+            }
 
             throw new ModbusException(errorCode, function);
         }
@@ -156,7 +168,7 @@ public class ModbusRtuClient : ModbusClientBase
         // the CRC includes the header, so we need those in the buffer
         Array.Copy(header, buffer, headerLen);
 
-        var read = headerLen;
+        read = headerLen;
         while (read < buffer.Length)
         {
             read += _port.Read(buffer, read, buffer.Length - read);
@@ -165,7 +177,10 @@ public class ModbusRtuClient : ModbusClientBase
         // do a CRC on all but the last 2 bytes, then see if that matches the last 2
         expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
         actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
-        if (expectedCrc != actualCrc) { throw new CrcException(); }
+        if (expectedCrc != actualCrc)
+        {
+            throw new CrcException("CRC error in response message", expectedCrc, actualCrc, buffer);
+        }
 
         if (resultLen == 0)
         {   //happens on write multiples
