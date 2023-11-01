@@ -23,6 +23,6 @@
     <PackageReference Include="System.IO.Ports" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Meadow.Contracts\Source\Meadow.Contracts\Meadow.Contracts.csproj" />
+    <PackageReference Include="Meadow.Contracts" Version="*" />
   </ItemGroup>
 </Project>
