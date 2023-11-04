@@ -205,7 +205,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
 
         for (int i = 0; i < values.Length; i++)
         {
-            values[i] = ConvertUShortsToFloat(data[i * 2 + 1], data[i * 2]);
+            values[i] = ConvertUShortsToFloat(data[(i * 2) + 1], data[i * 2]);
         }
         return values;
     }
@@ -237,6 +237,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         {
             await DeliverMessage(message);
             result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            if (result.Length == 0) return Array.Empty<ushort>();
         }
         finally
         {
@@ -246,7 +247,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         var registers = new ushort[registerCount];
         for (var i = 0; i < registerCount; i++)
         {
-            registers[i] = (ushort)((result[i * 2] << 8) | (result[i * 2 + 1]));
+            registers[i] = (ushort)((result[i * 2] << 8) | (result[(i * 2) + 1]));
         }
         return registers;
     }
@@ -277,7 +278,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            result = await ReadResult(ModbusFunction.ReadInputRegister);
         }
         finally
         {
@@ -287,7 +288,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         var registers = new ushort[result.Length / 2];
         for (var i = 0; i < registers.Length; i++)
         {
-            registers[i] = (ushort)((result[i * 2] << 8) | (result[i * 2 + 1]));
+            registers[i] = (ushort)((result[i * 2] << 8) | (result[(i * 2) + 1]));
         }
         return registers;
     }
@@ -384,18 +385,18 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         // Combine the high and low values into a single uint
         uint input = (uint)(((high & 0x00FF) << 24) |
                             ((high & 0xFF00) << 8) |
-                             (low & 0x00FF) << 8 |
-                              low >> 8);
+                             ((low & 0x00FF) << 8) |
+                              (low >> 8));
 
         // Get the sign bit
         uint signBit = (input >> 31) & 1;
         int sign = 1 - (int)(2 * signBit);
         // Get the exponent bits
-        var exponentBits = ((input >> 23) & 0xFF);
+        var exponentBits = (input >> 23) & 0xFF;
         var exponent = exponentBits - 127;
         // Get the fraction
-        var fractionBits = (input & 0x7FFFFF);
-        var fraction = 1.0 + fractionBits / Math.Pow(2, 23);
+        var fractionBits = input & 0x7FFFFF;
+        var fraction = 1.0 + (fractionBits / Math.Pow(2, 23));
 
         // get the value
         return (float)(sign * fraction * Math.Pow(2, exponent));
