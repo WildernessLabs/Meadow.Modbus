@@ -13,7 +13,10 @@ namespace Meadow.Modbus;
 /// </summary>
 public abstract class ModbusClientBase : IModbusBusClient, IDisposable
 {
-    private const int MaxRegisterReadCount = 125;
+    private const int MaxRegisterReadCount = 0x7d;
+    private const int MaxCoilReadCount = 0x7d0;
+    private const int MaxRegisterWriteCount = 0x7b;
+    private const int MaxCoilWriteCount = 0x7b0;
 
     /// <summary>
     /// Event triggered when the client is disconnected.
@@ -161,6 +164,11 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <param name="values">The values to write to the registers.</param>
     public async Task WriteHoldingRegisters(byte modbusAddress, ushort startRegister, IEnumerable<ushort> values)
     {
+        if (values.Count() > MaxRegisterWriteCount)
+        {
+            throw new ArgumentException($"A maximum of {MaxRegisterWriteCount} registers can be written at one time");
+        }
+
         if (startRegister > 40000)
         {
             // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
@@ -219,14 +227,14 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <returns>An array of ushort values representing the registers.</returns>
     public async Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount)
     {
+        if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
+
         if (startRegister > 40000)
         {
             // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
             // we'll support th user passing in the definition either way
             startRegister -= 40001;
         }
-
-        if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
         await _syncRoot.WaitAsync();
@@ -315,6 +323,11 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <inheritdoc/>
     public async Task WriteMultipleCoils(byte modbusAddress, ushort startRegister, IEnumerable<bool> values)
     {
+        if (values.Count() > MaxCoilWriteCount)
+        {
+            throw new ArgumentException($"A maximum of {MaxCoilWriteCount} coils can be written at one time");
+        }
+
         // Reduce bool value list to 8 bit byte array
         ushort byteArrayLength = (ushort)((values.Count() / 8) + (ushort)((values.Count() % 8) > 0 ? 1 : 0)); // Calc # 8 bit bytes needed to TX
         byte[] msgSegment = new byte[2 + 1 + byteArrayLength]; // StartAddr + coils + value bytes
@@ -346,7 +359,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <inheritdoc/>
     public async Task<bool[]> ReadCoils(byte modbusAddress, ushort startCoil, int coilCount)
     {
-        if (coilCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} coils can be retrieved at one time");
+        if (coilCount > MaxCoilReadCount) throw new ArgumentException($"A maximum of {MaxCoilReadCount} coils can be retrieved at one time");
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadCoil, startCoil, coilCount);
         await _syncRoot.WaitAsync();
@@ -356,7 +369,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            result = await ReadResult(ModbusFunction.ReadCoil);
         }
         finally
         {
