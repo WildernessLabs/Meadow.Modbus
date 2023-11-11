@@ -10,11 +10,27 @@ namespace Meadow.Modbus;
 public class CrcException : Exception
 {
     /// <summary>
+    /// The expected CRC value
+    /// </summary>
+    public ushort ExpectedCrc { get; } = 0;
+    /// <summary>
+    /// The calculated CRC
+    /// </summary>
+    public ushort ActualCrc { get; } = 0;
+    /// <summary>
+    /// The message failing the CRC check
+    /// </summary>
+    public byte[] MessageBytes { get; } = default!;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CrcException"/> class with a default error message.
     /// </summary>
-    internal CrcException()
-        : base("CRC Failure")
+    internal CrcException(string message, ushort expectedCrc, ushort actualCrc, byte[] messageBytes)
+        : base(message)
     {
+        ExpectedCrc = expectedCrc;
+        ActualCrc = actualCrc;
+        MessageBytes = messageBytes;
     }
 }
 

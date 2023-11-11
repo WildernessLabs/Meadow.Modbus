@@ -16,12 +16,13 @@
     <AssemblyVersion>0.28.0</AssemblyVersion>
     <FileVersion>0.28.0</FileVersion>
 	<LangVersion>10</LangVersion>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <None Include="icon.png" Pack="true" PackagePath="" />
     <PackageReference Include="System.IO.Ports" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Meadow.Contracts" Version="*" />
+    <PackageReference Include="Meadow.Contracts" Version="1.4.0.3" />
   </ItemGroup>
 </Project>
