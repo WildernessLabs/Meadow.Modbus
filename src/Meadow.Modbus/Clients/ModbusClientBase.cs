@@ -13,7 +13,10 @@ namespace Meadow.Modbus;
 /// </summary>
 public abstract class ModbusClientBase : IModbusBusClient, IDisposable
 {
-    private const int MaxRegisterReadCount = 125;
+    private const int MaxRegisterReadCount = 0x7d;
+    private const int MaxCoilReadCount = 0x7d0;
+    private const int MaxRegisterWriteCount = 0x7b;
+    private const int MaxCoilWriteCount = 0x7b0;
 
     /// <summary>
     /// Event triggered when the client is disconnected.
@@ -161,6 +164,11 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <param name="values">The values to write to the registers.</param>
     public async Task WriteHoldingRegisters(byte modbusAddress, ushort startRegister, IEnumerable<ushort> values)
     {
+        if (values.Count() > MaxRegisterWriteCount)
+        {
+            throw new ArgumentException($"A maximum of {MaxRegisterWriteCount} registers can be written at one time");
+        }
+
         if (startRegister > 40000)
         {
             // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
@@ -205,7 +213,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
 
         for (int i = 0; i < values.Length; i++)
         {
-            values[i] = ConvertUShortsToFloat(data[i * 2 + 1], data[i * 2]);
+            values[i] = ConvertUShortsToFloat(data[(i * 2) + 1], data[i * 2]);
         }
         return values;
     }
@@ -219,14 +227,14 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <returns>An array of ushort values representing the registers.</returns>
     public async Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount)
     {
+        if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
+
         if (startRegister > 40000)
         {
             // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
             // we'll support th user passing in the definition either way
             startRegister -= 40001;
         }
-
-        if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
         await _syncRoot.WaitAsync();
@@ -237,6 +245,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         {
             await DeliverMessage(message);
             result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            if (result.Length == 0) return Array.Empty<ushort>();
         }
         finally
         {
@@ -246,7 +255,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         var registers = new ushort[registerCount];
         for (var i = 0; i < registerCount; i++)
         {
-            registers[i] = (ushort)((result[i * 2] << 8) | (result[i * 2 + 1]));
+            registers[i] = (ushort)((result[i * 2] << 8) | (result[(i * 2) + 1]));
         }
         return registers;
     }
@@ -277,7 +286,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            result = await ReadResult(ModbusFunction.ReadInputRegister);
         }
         finally
         {
@@ -287,7 +296,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         var registers = new ushort[result.Length / 2];
         for (var i = 0; i < registers.Length; i++)
         {
-            registers[i] = (ushort)((result[i * 2] << 8) | (result[i * 2 + 1]));
+            registers[i] = (ushort)((result[i * 2] << 8) | (result[(i * 2) + 1]));
         }
         return registers;
     }
@@ -314,6 +323,11 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <inheritdoc/>
     public async Task WriteMultipleCoils(byte modbusAddress, ushort startRegister, IEnumerable<bool> values)
     {
+        if (values.Count() > MaxCoilWriteCount)
+        {
+            throw new ArgumentException($"A maximum of {MaxCoilWriteCount} coils can be written at one time");
+        }
+
         // Reduce bool value list to 8 bit byte array
         ushort byteArrayLength = (ushort)((values.Count() / 8) + (ushort)((values.Count() % 8) > 0 ? 1 : 0)); // Calc # 8 bit bytes needed to TX
         byte[] msgSegment = new byte[2 + 1 + byteArrayLength]; // StartAddr + coils + value bytes
@@ -345,7 +359,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <inheritdoc/>
     public async Task<bool[]> ReadCoils(byte modbusAddress, ushort startCoil, int coilCount)
     {
-        if (coilCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} coils can be retrieved at one time");
+        if (coilCount > MaxCoilReadCount) throw new ArgumentException($"A maximum of {MaxCoilReadCount} coils can be retrieved at one time");
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadCoil, startCoil, coilCount);
         await _syncRoot.WaitAsync();
@@ -355,7 +369,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            result = await ReadResult(ModbusFunction.ReadCoil);
         }
         finally
         {
@@ -384,18 +398,18 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         // Combine the high and low values into a single uint
         uint input = (uint)(((high & 0x00FF) << 24) |
                             ((high & 0xFF00) << 8) |
-                             (low & 0x00FF) << 8 |
-                              low >> 8);
+                             ((low & 0x00FF) << 8) |
+                              (low >> 8));
 
         // Get the sign bit
         uint signBit = (input >> 31) & 1;
         int sign = 1 - (int)(2 * signBit);
         // Get the exponent bits
-        var exponentBits = ((input >> 23) & 0xFF);
+        var exponentBits = (input >> 23) & 0xFF;
         var exponent = exponentBits - 127;
         // Get the fraction
-        var fractionBits = (input & 0x7FFFFF);
-        var fraction = 1.0 + fractionBits / Math.Pow(2, 23);
+        var fractionBits = input & 0x7FFFFF;
+        var fraction = 1.0 + (fractionBits / Math.Pow(2, 23));
 
         // get the value
         return (float)(sign * fraction * Math.Pow(2, exponent));

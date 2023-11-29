@@ -33,6 +33,15 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="ModbusTcpClient"/> class using the specified destination address and port.
     /// </summary>
+    /// <param name="destination">The destination address.</param>
+    public ModbusTcpClient(IPEndPoint destination)
+        : this(destination.Address, (short)destination.Port)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusTcpClient"/> class using the specified destination address and port.
+    /// </summary>
     /// <param name="destinationAddress">The destination address as a string.</param>
     /// <param name="port">The port to use for communication. Default is the Modbus TCP port (502).</param>
     public ModbusTcpClient(string destinationAddress, short port = DefaultModbusTCPPort)
