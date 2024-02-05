@@ -6,76 +6,9 @@ using System.Threading.Tasks;
 
 namespace Meadow.Modbus;
 
-public class TStat8 : ModbusPolledDevice
-{
-    private float _currentSetPoint;
-
-    public TStat8(ModbusRtuClient client, byte modbusAddress, TimeSpan? refreshPeriod = null)
-        : base(client, modbusAddress, refreshPeriod)
-    {
-        MapHoldingRegistersToProperty(
-            startRegister: 121,
-            registerCount: 1,
-            propertyName: nameof(Temperature),
-            scale: 0.10); // value is in 0.1 deg
-
-        // map to a field, not a property as the property setter needs to perform an action
-        MapHoldingRegistersToField(
-            startRegister: 345,
-            registerCount: 1,
-            fieldName: nameof(_currentSetPoint),
-            scale: 0.10);
-
-        MapHoldingRegistersToProperty(
-            startRegister: 198,
-            registerCount: 1,
-            propertyName: nameof(Humidity));
-
-        MapHoldingRegistersToProperty(
-            startRegister: 364, // not scaled by 0.1
-            registerCount: 1,
-            propertyName: nameof(PowerUpSetPoint));
-
-        MapHoldingRegistersToProperty(
-            startRegister: 365,
-            registerCount: 1,
-            propertyName: nameof(MaxSetPoint));
-
-        MapHoldingRegistersToProperty(
-            startRegister: 366,
-            registerCount: 1,
-            propertyName: nameof(MinSetPoint));
-
-        MapHoldingRegistersToProperty(
-            startRegister: 410,
-            registerCount: 7,
-            propertyName: nameof(Clock),
-            conversionFunction: ConvertRegistersToClockTime);
-    }
-
-    private object ConvertRegistersToClockTime(ushort[] data)
-    {
-        // data[2] is week, so ignore
-        return new DateTime(data[0], data[1], data[3], data[4], data[5], data[6]);
-    }
-
-    public DateTime Clock { get; private set; }
-    public int Humidity { get; private set; }
-    public float Temperature { get; private set; }
-    public float MinSetPoint { get; private set; }
-    public float MaxSetPoint { get; private set; }
-    public float PowerUpSetPoint { get; private set; }
-
-    public float SetPoint
-    {
-        get => _currentSetPoint;
-        set
-        {
-            _ = WriteHoldingRegister(345, (ushort)(value * 10));
-        }
-    }
-}
-
+/// <summary>
+/// Represents an abstract base class for Modbus devices where register values are polled
+/// </summary>
 public abstract class ModbusPolledDevice
 {
     private class RegisterMapping
@@ -92,7 +25,10 @@ public abstract class ModbusPolledDevice
     private const int MinimumPollDelayMs = 100;
     private readonly SemaphoreSlim _mapLock = new SemaphoreSlim(1, 1);
 
-    public readonly TimeSpan DefaultRefreshPeriod = TimeSpan.FromSeconds(5);
+    /// <summary>
+    /// Gets the default refresh period for polling.
+    /// </summary>
+    public static readonly TimeSpan DefaultRefreshPeriod = TimeSpan.FromSeconds(5);
 
     private ModbusClientBase _client;
     private byte _address;
@@ -101,20 +37,28 @@ public abstract class ModbusPolledDevice
 
     private List<RegisterMapping> _mapping = new();
 
+    /// <summary>
+    /// Starts polling the Modbus device.
+    /// </summary>
     public virtual void StartPolling()
     {
         _timer.Change(_refreshPeriosMs, -1);
     }
 
+    /// <summary>
+    /// Stops polling the Modbus device.
+    /// </summary>
     public virtual void StopPolling()
     {
         _timer.Change(-1, -1);
     }
 
-    public ModbusPolledDevice(ModbusClientBase client, byte modbusAddress)
-    {
-    }
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusPolledDevice"/> class.
+    /// </summary>
+    /// <param name="client">The Modbus client for communication.</param>
+    /// <param name="modbusAddress">The Modbus address of the device.</param>
+    /// <param name="refreshPeriod">The optional refresh period for polling.</param>
     public ModbusPolledDevice(ModbusClientBase client, byte modbusAddress, TimeSpan? refreshPeriod = null)
     {
         _client = client;
@@ -123,6 +67,12 @@ public abstract class ModbusPolledDevice
         _timer = new Timer(RefreshTimerProc, null, -1, -1);
     }
 
+    /// <summary>
+    /// Writes one or more values to the holding registers of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="data">The values to be written to the holding registers.</param>
+    /// <returns>A task representing the asynchronous write operation.</returns>
     protected async Task WriteHoldingRegister(ushort startRegister, params ushort[] data)
     {
         if (data.Length == 1)
@@ -133,12 +83,22 @@ public abstract class ModbusPolledDevice
         await _client.WriteHoldingRegisters(_address, startRegister, data);
     }
 
+    /// <summary>
+    /// Maps a range of holding registers to a property of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="registerCount">The number of registers to map.</param>
+    /// <param name="propertyName">The name of the property to map the registers to.</param>
+    /// <param name="scale">The optional scale factor to apply to the register values.</param>
+    /// <param name="offset">The optional offset to apply to the register values.</param>
     protected void MapHoldingRegistersToProperty(ushort startRegister, int registerCount, string propertyName, double? scale = null, double? offset = null)
     {
         _mapLock.Wait();
         try
         {
-            var prop = this.GetType().GetProperty(propertyName);
+            var prop = this.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                ?? throw new ArgumentException($"Property '{propertyName}' not found");
+
             _mapping.Add(new RegisterMapping
             {
                 PropertyInfo = prop,
@@ -154,6 +114,14 @@ public abstract class ModbusPolledDevice
         }
     }
 
+    /// <summary>
+    /// Maps a range of holding registers to a field of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="registerCount">The number of registers to map.</param>
+    /// <param name="fieldName">The name of the field to map the registers to.</param>
+    /// <param name="scale">The optional scale factor to apply to the register values.</param>
+    /// <param name="offset">The optional offset to apply to the register values.</param>
     protected void MapHoldingRegistersToField(ushort startRegister, int registerCount, string fieldName, double? scale = null, double? offset = null)
     {
         _mapLock.Wait();
@@ -177,15 +145,53 @@ public abstract class ModbusPolledDevice
         }
     }
 
+    /// <summary>
+    /// Maps a range of holding registers to a property of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="registerCount">The number of registers to map.</param>
+    /// <param name="propertyName">The name of the property to map the registers to.</param>
+    /// <param name="conversionFunction">The custom conversion function to transform raw register values to the property type.</param>
     protected void MapHoldingRegistersToProperty(ushort startRegister, int registerCount, string propertyName, Func<ushort[], object> conversionFunction)
     {
         _mapLock.Wait();
         try
         {
-            var prop = this.GetType().GetProperty(propertyName);
+            var prop = this.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                ?? throw new ArgumentException($"Property '{propertyName}' not found");
+
             _mapping.Add(new RegisterMapping
             {
                 PropertyInfo = prop,
+                StartRegister = startRegister,
+                RegisterCount = registerCount,
+                ConversionFunction = conversionFunction
+            });
+        }
+        finally
+        {
+            _mapLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Maps a range of holding registers to a field of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="registerCount">The number of registers to map.</param>
+    /// <param name="fieldName">The name of the property to map the registers to.</param>
+    /// <param name="conversionFunction">The custom conversion function to transform raw register values to the field type.</param>
+    protected void MapHoldingRegistersToField(ushort startRegister, int registerCount, string fieldName, Func<ushort[], object> conversionFunction)
+    {
+        _mapLock.Wait();
+        try
+        {
+            var field = this.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                ?? throw new ArgumentException($"Field '{fieldName}' not found");
+
+            _mapping.Add(new RegisterMapping
+            {
+                FieldInfo = field,
                 StartRegister = startRegister,
                 RegisterCount = registerCount,
                 ConversionFunction = conversionFunction
