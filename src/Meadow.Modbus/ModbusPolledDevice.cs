@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,6 +14,32 @@ namespace Meadow.Modbus;
 /// </summary>
 public abstract class ModbusPolledDevice
 {
+    /// <summary>
+    /// Represents the possible formats of source registers
+    /// </summary>
+    public enum SourceFormat
+    {
+        /// <summary>
+        /// Little-endian integer format.
+        /// </summary>
+        LittleEndianInteger,
+
+        /// <summary>
+        /// Big-endian integer format.
+        /// </summary>
+        BigEndianInteger,
+
+        /// <summary>
+        /// Little-endian IEEE 794 floating-point format.
+        /// </summary>
+        LittleEndianFloat,
+
+        /// <summary>
+        /// Big-endian IEEE 794 floating-point format.
+        /// </summary>
+        BigEndianFloat,
+    }
+
     private class RegisterMapping
     {
         public ushort StartRegister { get; set; }
@@ -20,6 +49,7 @@ public abstract class ModbusPolledDevice
         public double? Scale { get; set; }
         public double? Offset { get; set; }
         public Func<ushort[], object>? ConversionFunction { get; set; }
+        public SourceFormat SourceFormat { get; set; } = SourceFormat.LittleEndianInteger;
     }
 
     private const int MinimumPollDelayMs = 100;
@@ -91,7 +121,14 @@ public abstract class ModbusPolledDevice
     /// <param name="propertyName">The name of the property to map the registers to.</param>
     /// <param name="scale">The optional scale factor to apply to the register values.</param>
     /// <param name="offset">The optional offset to apply to the register values.</param>
-    protected void MapHoldingRegistersToProperty(ushort startRegister, int registerCount, string propertyName, double? scale = null, double? offset = null)
+    /// <param name="sourceFormat">The format of the source registers</param>
+    protected void MapHoldingRegistersToProperty(
+        ushort startRegister,
+        int registerCount,
+        string propertyName,
+        double? scale = null,
+        double? offset = null,
+        SourceFormat sourceFormat = SourceFormat.LittleEndianInteger)
     {
         _mapLock.Wait();
         try
@@ -105,7 +142,8 @@ public abstract class ModbusPolledDevice
                 StartRegister = startRegister,
                 RegisterCount = registerCount,
                 Scale = scale,
-                Offset = offset
+                Offset = offset,
+                SourceFormat = sourceFormat
             });
         }
         finally
@@ -122,7 +160,14 @@ public abstract class ModbusPolledDevice
     /// <param name="fieldName">The name of the field to map the registers to.</param>
     /// <param name="scale">The optional scale factor to apply to the register values.</param>
     /// <param name="offset">The optional offset to apply to the register values.</param>
-    protected void MapHoldingRegistersToField(ushort startRegister, int registerCount, string fieldName, double? scale = null, double? offset = null)
+    /// <param name="sourceFormat">The format of the source registers</param>
+    protected void MapHoldingRegistersToField(
+        ushort startRegister,
+        int registerCount,
+        string fieldName,
+        double? scale = null,
+        double? offset = null,
+        SourceFormat sourceFormat = SourceFormat.LittleEndianInteger)
     {
         _mapLock.Wait();
         try
@@ -136,7 +181,8 @@ public abstract class ModbusPolledDevice
                 StartRegister = startRegister,
                 RegisterCount = registerCount,
                 Scale = scale,
-                Offset = offset
+                Offset = offset,
+                SourceFormat = sourceFormat
             });
         }
         finally
@@ -319,16 +365,61 @@ public abstract class ModbusPolledDevice
         }
     }
 
+    /// <summary>
+    /// Retrieves the value from the specified register array based on the provided data format.
+    /// </summary>
+    /// <param name="data">The array of ushort register values.</param>
+    /// <param name="format">The source data format indicating how to interpret the values in the data array.</param>
+    /// <returns>The extracted value in its raw form.</returns>
+    protected object GetValueByFormat(ushort[] data, SourceFormat format)
+    {
+        Span<byte> bytes = MemoryMarshal.Cast<ushort, byte>(data);
+
+        switch (format)
+        {
+            case SourceFormat.LittleEndianFloat:
+                return data.Length switch
+                {
+                    1 => BitConverter.ToSingle(bytes[..2]),
+                    2 => BitConverter.ToSingle(bytes[..4]),
+                    4 => BitConverter.ToDouble(bytes[..8]),
+                    _ => throw new ArgumentException()
+                };
+            case SourceFormat.BigEndianFloat:
+                Span<byte> bebytes = bytes
+                    .ToArray()
+                    .Reverse()
+                    .ToArray()
+                    .AsSpan();
+                return data.Length switch
+                {
+                    1 => BitConverter.ToSingle(bebytes[..2]),
+                    2 => BitConverter.ToSingle(bebytes[..4]),
+                    4 => BitConverter.ToDouble(bebytes[..8]),
+                    _ => throw new ArgumentException()
+                };
+            case SourceFormat.BigEndianInteger:
+                return data.Length switch
+                {
+                    1 => BinaryPrimitives.ReadInt16BigEndian(bytes[..2]),
+                    2 => BinaryPrimitives.ReadInt32BigEndian(bytes[..4]),
+                    4 => BinaryPrimitives.ReadInt64BigEndian(bytes[..8]),
+                    _ => throw new ArgumentException()
+                };
+            default:
+                return data.Length switch
+                {
+                    1 => BinaryPrimitives.ReadInt16LittleEndian(bytes[..2]),
+                    2 => BinaryPrimitives.ReadInt32LittleEndian(bytes[..4]),
+                    4 => BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]),
+                    _ => throw new ArgumentException()
+                };
+        }
+    }
+
     private void UpdateIntegerProperty(ushort[] data, RegisterMapping mapping)
     {
-        // do scale/offset        
-        long final = mapping.RegisterCount switch
-        {
-            1 => data[0],
-            2 => data[0] << 16 | data[1],
-            4 => data[0] << 48 | data[1] << 32 | data[2] << 16 | data[3],
-            _ => throw new ArgumentException()
-        };
+        var final = Convert.ToInt64(GetValueByFormat(data, mapping.SourceFormat));
 
         if (mapping.Scale != null)
         {
@@ -359,14 +450,7 @@ public abstract class ModbusPolledDevice
 
     private void UpdateDoubleProperty(ushort[] data, RegisterMapping mapping)
     {
-        // do scale/offset        
-        double final = mapping.RegisterCount switch
-        {
-            1 => data[0],
-            2 => data[0] << 16 | data[1],
-            4 => data[0] << 48 | data[1] << 32 | data[2] << 16 | data[3],
-            _ => throw new ArgumentException()
-        };
+        var final = Convert.ToDouble(GetValueByFormat(data, mapping.SourceFormat));
 
         if (mapping.Scale != null)
         {
@@ -389,14 +473,7 @@ public abstract class ModbusPolledDevice
 
     private void UpdateIntegerField(ushort[] data, RegisterMapping mapping)
     {
-        // do scale/offset        
-        long final = mapping.RegisterCount switch
-        {
-            1 => data[0],
-            2 => data[0] << 16 | data[1],
-            4 => data[0] << 48 | data[1] << 32 | data[2] << 16 | data[3],
-            _ => throw new ArgumentException()
-        };
+        var final = Convert.ToInt64(GetValueByFormat(data, mapping.SourceFormat));
 
         if (mapping.Scale != null)
         {
@@ -427,14 +504,7 @@ public abstract class ModbusPolledDevice
 
     private void UpdateDoubleField(ushort[] data, RegisterMapping mapping)
     {
-        // do scale/offset        
-        double final = mapping.RegisterCount switch
-        {
-            1 => data[0],
-            2 => data[0] << 16 | data[1],
-            4 => data[0] << 48 | data[1] << 32 | data[2] << 16 | data[3],
-            _ => throw new ArgumentException()
-        };
+        var final = Convert.ToDouble(GetValueByFormat(data, mapping.SourceFormat));
 
         if (mapping.Scale != null)
         {

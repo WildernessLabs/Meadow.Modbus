@@ -9,6 +9,8 @@ public class TStat8 : ModbusPolledDevice
 {
     private float _currentSetPoint;
 
+    private const ushort SetPointRegister = 345;
+
     public TStat8(ModbusRtuClient client, byte modbusAddress, TimeSpan? refreshPeriod = null)
         : base(client, modbusAddress, refreshPeriod)
     {
@@ -20,7 +22,7 @@ public class TStat8 : ModbusPolledDevice
 
         // map to a field, not a property as the property setter needs to perform an action
         MapHoldingRegistersToField(
-            startRegister: 345,
+            startRegister: SetPointRegister,
             registerCount: 1,
             fieldName: nameof(_currentSetPoint),
             scale: 0.10);
@@ -70,7 +72,7 @@ public class TStat8 : ModbusPolledDevice
         get => _currentSetPoint;
         set
         {
-            _ = WriteHoldingRegister(345, (ushort)(value * 10));
+            _ = WriteHoldingRegister(SetPointRegister, (ushort)(value * 10));
         }
     }
 }
