@@ -36,6 +36,7 @@ public class ModbusRtuClient : ModbusClientBase
     public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
     {
         _port = port;
+        _port.WriteTimeout = _port.ReadTimeout = TimeSpan.FromSeconds(5);
         _enable = enablePort;
     }
 
