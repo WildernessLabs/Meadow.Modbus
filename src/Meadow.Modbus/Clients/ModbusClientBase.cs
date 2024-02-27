@@ -17,6 +17,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     private const int MaxCoilReadCount = 0x7d0;
     private const int MaxRegisterWriteCount = 0x7b;
     private const int MaxCoilWriteCount = 0x7b0;
+    private const int LockTimeoutMs = 2000;
 
     /// <summary>
     /// Event triggered when the client is disconnected.
@@ -143,7 +144,10 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         // swap endianness, because Modbus
         var data = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)value));
         var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteRegister, register, data);
-        await _syncRoot.WaitAsync();
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return;
+        }
 
         try
         {
@@ -185,7 +189,10 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         var data = values.SelectMany(i => BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)i))).ToArray();
 
         var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteMultipleRegisters, startRegister, data);
-        await _syncRoot.WaitAsync();
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return;
+        }
 
         try
         {
@@ -237,7 +244,10 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         }
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
-        await _syncRoot.WaitAsync();
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return Array.Empty<ushort>();
+        }
 
         byte[] result;
 
@@ -279,7 +289,10 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadInputRegister, startRegister, registerCount);
-        await _syncRoot.WaitAsync();
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return Array.Empty<ushort>();
+        }
 
         byte[] result;
 
@@ -308,7 +321,11 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
 
         var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteCoil, register, data);
 
-        await _syncRoot.WaitAsync();
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return;
+        }
+
         try
         {
             await DeliverMessage(message);
@@ -339,7 +356,10 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         new BitArray(values.ToArray()).CopyTo(msgSegment, 3); // Concatinate bool binary values list as converted bytes
 
         var message = GenerateWriteMessage(modbusAddress, ModbusFunction.WriteMultipleCoils, startRegister, msgSegment);
-        await _syncRoot.WaitAsync();
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return;
+        }
 
         try
         {
@@ -362,7 +382,10 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         if (coilCount > MaxCoilReadCount) throw new ArgumentException($"A maximum of {MaxCoilReadCount} coils can be retrieved at one time");
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadCoil, startCoil, coilCount);
-        await _syncRoot.WaitAsync();
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return Array.Empty<bool>();
+        }
 
         byte[] result;
 
