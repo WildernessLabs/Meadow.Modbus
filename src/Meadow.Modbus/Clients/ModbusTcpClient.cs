@@ -114,7 +114,13 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
             }
 
             await _client.ConnectAsync(Destination, Port);
-            IsConnected = true;
+
+            IsConnected = _client.Connected;
+            if (!IsConnected)
+                throw new TimeoutException();
+
+            _client.ReceiveTimeout = (int)Timeout.TotalMilliseconds;
+            _client.SendTimeout = (int)Timeout.TotalMilliseconds;
         }
         catch (Exception ex)
         {
