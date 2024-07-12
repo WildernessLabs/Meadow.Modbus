@@ -313,6 +313,7 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
 
         if (!count.IsCompleted)
         {
+            _client.Close();
             throw new Exception("Incomplete Response");
         }
 
