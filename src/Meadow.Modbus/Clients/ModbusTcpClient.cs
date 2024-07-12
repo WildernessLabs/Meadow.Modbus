@@ -19,12 +19,12 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     /// <summary>
     /// Gets the destination IP address for the Modbus TCP client.
     /// </summary>
-    public IPAddress Destination { get; }
+    public IPAddress Destination { get; private set; }
 
     /// <summary>
     /// Gets the port used for the Modbus TCP communication.
     /// </summary>
-    public short Port { get; }
+    public short Port { get; private set; }
 
     private TcpClient _client;
     private ushort _transaction = 0;
@@ -65,6 +65,42 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     protected override void DisposeManagedResources()
     {
         _client?.Dispose();
+    }
+
+    /// <summary>
+    /// Connect to an endpoint. Allows for reusing the ModbusTcpClient.
+    /// </summary>
+    /// <param name="destination"></param>
+    /// <returns></returns>
+    public async Task Connect(IPEndPoint destination)
+    {
+        await Connect(destination.Address, (short)destination.Port);
+    }
+
+    /// <summary>
+    /// Connect to an endpoint. Allows for reusing the ModbusTcpClient.
+    /// </summary>
+    /// <param name="destinationAddress"></param>
+    /// <param name="port"></param>
+    /// <returns></returns>
+    public async Task Connect(string destinationAddress, short port = DefaultModbusTCPPort)
+    {
+        await Connect(IPAddress.Parse(destinationAddress), port);
+    }
+
+    /// <summary>
+    /// Connect to an endpoint. Allows for reusing the ModbusTcpClient.
+    /// </summary>
+    /// <param name="destination"></param>
+    /// <param name="port"></param>
+    /// <returns></returns>
+    public async Task Connect(IPAddress destination, short port = DefaultModbusTCPPort)
+    {
+        if (IsConnected)
+            Disconnect();
+        Destination = destination;
+        Port = port;
+        await Connect();
     }
 
     /// <inheritdoc/>
