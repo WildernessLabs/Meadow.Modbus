@@ -19,12 +19,12 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     /// <summary>
     /// Gets the destination IP address for the Modbus TCP client.
     /// </summary>
-    public IPAddress Destination { get; }
+    public IPAddress Destination { get; private set; }
 
     /// <summary>
     /// Gets the port used for the Modbus TCP communication.
     /// </summary>
-    public short Port { get; }
+    public short Port { get; private set; }
 
     private TcpClient _client;
     private ushort _transaction = 0;
@@ -67,6 +67,42 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
         _client?.Dispose();
     }
 
+    /// <summary>
+    /// Connect to an endpoint. Allows for reusing the ModbusTcpClient.
+    /// </summary>
+    /// <param name="destination"></param>
+    /// <returns></returns>
+    public async Task Connect(IPEndPoint destination)
+    {
+        await Connect(destination.Address, (short)destination.Port);
+    }
+
+    /// <summary>
+    /// Connect to an endpoint. Allows for reusing the ModbusTcpClient.
+    /// </summary>
+    /// <param name="destinationAddress"></param>
+    /// <param name="port"></param>
+    /// <returns></returns>
+    public async Task Connect(string destinationAddress, short port = DefaultModbusTCPPort)
+    {
+        await Connect(IPAddress.Parse(destinationAddress), port);
+    }
+
+    /// <summary>
+    /// Connect to an endpoint. Allows for reusing the ModbusTcpClient.
+    /// </summary>
+    /// <param name="destination"></param>
+    /// <param name="port"></param>
+    /// <returns></returns>
+    public async Task Connect(IPAddress destination, short port = DefaultModbusTCPPort)
+    {
+        if (IsConnected)
+            Disconnect();
+        Destination = destination;
+        Port = port;
+        await Connect();
+    }
+
     /// <inheritdoc/>
     public override async Task Connect()
     {
@@ -78,7 +114,13 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
             }
 
             await _client.ConnectAsync(Destination, Port);
-            IsConnected = true;
+
+            IsConnected = _client.Connected;
+            if (!IsConnected)
+                throw new TimeoutException();
+
+            _client.ReceiveTimeout = (int)Timeout.TotalMilliseconds;
+            _client.SendTimeout = (int)Timeout.TotalMilliseconds;
         }
         catch (Exception ex)
         {
@@ -190,12 +232,26 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
         }
         if (!_client.Connected)
         {
-            return;
+            throw new SocketException();
         }
 
         try
         {
-            await _client.GetStream().WriteAsync(message, 0, message.Length);
+            Task count = _client.GetStream().WriteAsync(message, 0, message.Length);
+
+            // send timeout
+            var t = 0;
+
+            while (!count.IsCompleted)
+            {
+                await Task.Delay(10);
+                t += 10;
+                if (Timeout.TotalMilliseconds > 0 && t > Timeout.TotalMilliseconds)
+                {
+                    _client.Close();
+                    throw new TimeoutException();
+                }
+            }
         }
         catch
         {
@@ -221,16 +277,28 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
 
         if (!_client.Connected)
         {
-            return new byte[0];
-            //                throw new System.Net.Sockets.SocketException();
+            throw new SocketException();
         }
 
         // responses (even an error) are at least 9 bytes - read enough to know the status
         Array.Clear(_responseBuffer, 0, _responseBuffer.Length);
 
-        var count = await _client.GetStream().ReadAsync(_responseBuffer, 0, 9);
+        Task<int> count = _client.GetStream().ReadAsync(_responseBuffer, 0, 9);
 
-        // TODO: we assume we get 9 bytes back here - handle that *not* happening
+        // send timeout
+        var t = 0;
+
+        // handles 9 bytes not being recieved
+        while (!count.IsCompleted)
+        {
+            await Task.Delay(10);
+            t += 10;
+            if (Timeout.TotalMilliseconds > 0 && t > Timeout.TotalMilliseconds)
+            {
+                _client.Close();
+                throw new TimeoutException();
+            }
+        }
 
         if ((_responseBuffer[7] & 0x80) != 0)
         {
@@ -240,16 +308,13 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
         }
 
         // read any remaining payload
-        try
+        count = _client.GetStream().ReadAsync(_responseBuffer, 9, _responseBuffer[8]);
+        await Task.WhenAny(count, Task.Delay(10)); // the data should already be here?
+
+        if (!count.IsCompleted)
         {
-            count = await _client.GetStream().ReadAsync(_responseBuffer, 9, _responseBuffer[8]);
-            // TODO: if count < the expected, we need to keep reading
-        }
-        catch
-        {
-            IsConnected = false;
             _client.Close();
-            throw;
+            throw new Exception("Incomplete Response");
         }
 
         // if it's not an error, responseBuffer[8] is the payload length (as a byte)
