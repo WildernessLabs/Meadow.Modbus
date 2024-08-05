@@ -127,6 +127,11 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     }
 
     /// <summary>
+    /// Gets or sets the Timeout value for reading / writing to a Modbus device.
+    /// </summary>
+    public TimeSpan Timeout { get; protected set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// Writes a single value to a holding register on the Modbus device.
     /// </summary>
     /// <param name="modbusAddress">The Modbus device address.</param>
@@ -134,12 +139,12 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <param name="value">The value to write to the register.</param>
     public async Task WriteHoldingRegister(byte modbusAddress, ushort register, ushort value)
     {
-        if (register > 40000)
-        {
-            // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
-            // we'll support th user passing in the definition either way
-            register -= 40001;
-        }
+        //if (register > 40000)
+        //{
+        //    // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
+        //    // we'll support th user passing in the definition either way
+        //    register -= 40001;
+        //}
 
         // swap endianness, because Modbus
         var data = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)value));
@@ -173,12 +178,12 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
             throw new ArgumentException($"A maximum of {MaxRegisterWriteCount} registers can be written at one time");
         }
 
-        if (startRegister > 40000)
-        {
-            // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
-            // we'll support th user passing in the definition either way
-            startRegister -= 40001;
-        }
+        //if (startRegister > 40000)
+        //{
+        //    // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
+        //    // we'll support th user passing in the definition either way
+        //    startRegister -= 40001;
+        //}
 
         if (values.Count() == 0)
         {
@@ -236,12 +241,12 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     {
         if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
 
-        if (startRegister > 40000)
-        {
-            // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
-            // we'll support th user passing in the definition either way
-            startRegister -= 40001;
-        }
+        //if (startRegister > 40000)
+        //{
+        //    // holding registers are defined as starting at 40001, but the actual bus read doesn't use the address, but instead the offset
+        //    // we'll support th user passing in the definition either way
+        //    startRegister -= 40001;
+        //}
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
         if (!await _syncRoot.WaitAsync(LockTimeoutMs))
@@ -279,12 +284,12 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <returns>An array of ushort values representing the registers.</returns>
     public async Task<ushort[]> ReadInputRegisters(byte modbusAddress, ushort startRegister, int registerCount)
     {
-        if (startRegister > 30000)
-        {
-            // input registers are defined as starting at 30001, but the actual bus read doesn't use the address, but instead the offset
-            // we'll support th user passing in the definition either way
-            startRegister -= 30001;
-        }
+        //if (startRegister > 30000)
+        //{
+        //    // input registers are defined as starting at 30001, but the actual bus read doesn't use the address, but instead the offset
+        //    // we'll support th user passing in the definition either way
+        //    startRegister -= 30001;
+        //}
 
         if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
 
