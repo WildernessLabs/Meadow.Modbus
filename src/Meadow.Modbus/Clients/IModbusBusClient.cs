@@ -41,7 +41,8 @@ public interface IModbusBusClient
     /// <param name="modbusAddress"></param>
     /// <param name="register"></param>
     /// <param name="value"></param>
-    Task WriteHoldingRegister(byte modbusAddress, ushort register, ushort value);
+    /// <param name="addressIsLogical">If the address is a Modbus logical address, 40001 will be subtracted to get the register address.</param>
+    Task WriteHoldingRegister(byte modbusAddress, ushort register, ushort value, bool addressIsLogical = false);
 
     /// <summary>
     /// Writes multiple values to holding registers (modbus function 16)
@@ -49,8 +50,9 @@ public interface IModbusBusClient
     /// <param name="modbusAddress">The target device modbus address</param>
     /// <param name="startRegister">The first register to begin writing</param>
     /// <param name="values">The registers (16-bit values) to write</param>
+    /// <param name="addressIsLogical">If the address is a Modbus logical address, 40001 will be subtracted to get the register address.</param>
     /// <returns></returns>
-    Task WriteHoldingRegisters(byte modbusAddress, ushort startRegister, IEnumerable<ushort> values);
+    Task WriteHoldingRegisters(byte modbusAddress, ushort startRegister, IEnumerable<ushort> values, bool addressIsLogical = false);
 
     /// <summary>
     /// Reads the requested number of holding registers from a device
@@ -58,8 +60,9 @@ public interface IModbusBusClient
     /// <param name="modbusAddress"></param>
     /// <param name="startRegister"></param>
     /// <param name="registerCount"></param>
+    /// <param name="addressIsLogical">If the address is a Modbus logical address, 40001 will be subtracted to get the register address.</param>
     /// <returns></returns>
-    Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount);
+    Task<ushort[]> ReadHoldingRegisters(byte modbusAddress, ushort startRegister, int registerCount, bool addressIsLogical = false);
 
     /// <summary>
     /// Reads the requested number of floats from the holding registers

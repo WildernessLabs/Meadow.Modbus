@@ -41,6 +41,11 @@ public enum ModbusErrorCode
     GatePathUnavailable = 10,
 
     /// <summary>
+    /// Gateway Target Device Failed to Respond.
+    /// </summary>
+    GatewayTimeoutError = 11,
+
+    /// <summary>
     /// Send failed error code.
     /// </summary>
     SendFailed = 100,
