@@ -15,6 +15,16 @@ namespace Meadow.Modbus;
 public abstract class ModbusPolledDevice
 {
     /// <summary>
+    /// Raised when communication with the target device times out
+    /// </summary>
+    public event EventHandler? CommTimeout;
+
+    /// <summary>
+    /// Raised when a communication error with the target device occurs
+    /// </summary>
+    public event EventHandler<Exception>? CommError;
+
+    /// <summary>
     /// Represents the possible formats of source registers
     /// </summary>
     public enum SourceFormat
@@ -65,7 +75,8 @@ public abstract class ModbusPolledDevice
     private Timer _timer;
     private int _refreshPeriosMs;
 
-    private List<RegisterMapping> _mapping = new();
+    private List<RegisterMapping> _holdingRegisterMap = new();
+    private List<RegisterMapping> _inputRegisterMap = new();
 
     /// <summary>
     /// Starts polling the Modbus device.
@@ -109,8 +120,32 @@ public abstract class ModbusPolledDevice
         {
             await _client.WriteHoldingRegister(_address, startRegister, data[0]);
         }
+        else
+        {
+            await _client.WriteHoldingRegisters(_address, startRegister, data);
+        }
+    }
 
-        await _client.WriteHoldingRegisters(_address, startRegister, data);
+    /// <summary>
+    /// Reads a value from a coil register of the Modbus device.
+    /// </summary>
+    /// <param name="register">The coil register address.</param>
+    /// <returns>A task representing the asynchronous write operation.</returns>
+    protected async Task<bool> ReadCoil(ushort register)
+    {
+        var registers = await _client.ReadCoils(_address, register, 1);
+        return registers[0];
+    }
+
+    /// <summary>
+    /// Writes a value to a coil register of the Modbus device.
+    /// </summary>
+    /// <param name="register">The coil register address.</param>
+    /// <param name="value">The value to be written to the coil registers.</param>
+    /// <returns>A task representing the asynchronous write operation.</returns>
+    protected async Task WriteCoil(ushort register, bool value)
+    {
+        await _client.WriteCoil(_address, register, value);
     }
 
     /// <summary>
@@ -136,7 +171,46 @@ public abstract class ModbusPolledDevice
             var prop = this.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                 ?? throw new ArgumentException($"Property '{propertyName}' not found");
 
-            _mapping.Add(new RegisterMapping
+            _holdingRegisterMap.Add(new RegisterMapping
+            {
+                PropertyInfo = prop,
+                StartRegister = startRegister,
+                RegisterCount = registerCount,
+                Scale = scale,
+                Offset = offset,
+                SourceFormat = sourceFormat
+            });
+        }
+        finally
+        {
+            _mapLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Maps a range of input registers to a property of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="registerCount">The number of registers to map.</param>
+    /// <param name="propertyName">The name of the property to map the registers to.</param>
+    /// <param name="scale">The optional scale factor to apply to the register values.</param>
+    /// <param name="offset">The optional offset to apply to the register values.</param>
+    /// <param name="sourceFormat">The format of the source registers</param>
+    protected void MapInputRegistersToProperty(
+        ushort startRegister,
+        int registerCount,
+        string propertyName,
+        double? scale = null,
+        double? offset = null,
+        SourceFormat sourceFormat = SourceFormat.LittleEndianInteger)
+    {
+        _mapLock.Wait();
+        try
+        {
+            var prop = this.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                ?? throw new ArgumentException($"Property '{propertyName}' not found");
+
+            _inputRegisterMap.Add(new RegisterMapping
             {
                 PropertyInfo = prop,
                 StartRegister = startRegister,
@@ -175,7 +249,7 @@ public abstract class ModbusPolledDevice
             var field = this.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                 ?? throw new ArgumentException($"Field '{fieldName}' not found");
 
-            _mapping.Add(new RegisterMapping
+            _holdingRegisterMap.Add(new RegisterMapping
             {
                 FieldInfo = field,
                 StartRegister = startRegister,
@@ -206,7 +280,7 @@ public abstract class ModbusPolledDevice
             var prop = this.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                 ?? throw new ArgumentException($"Property '{propertyName}' not found");
 
-            _mapping.Add(new RegisterMapping
+            _holdingRegisterMap.Add(new RegisterMapping
             {
                 PropertyInfo = prop,
                 StartRegister = startRegister,
@@ -221,11 +295,11 @@ public abstract class ModbusPolledDevice
     }
 
     /// <summary>
-    /// Maps a range of holding registers to a field of the Modbus device.
+    /// Maps a range of holding registers to a class field
     /// </summary>
     /// <param name="startRegister">The starting register address.</param>
     /// <param name="registerCount">The number of registers to map.</param>
-    /// <param name="fieldName">The name of the property to map the registers to.</param>
+    /// <param name="fieldName">The name of the field to map the registers to.</param>
     /// <param name="conversionFunction">The custom conversion function to transform raw register values to the field type.</param>
     protected void MapHoldingRegistersToField(ushort startRegister, int registerCount, string fieldName, Func<ushort[], object> conversionFunction)
     {
@@ -235,7 +309,36 @@ public abstract class ModbusPolledDevice
             var field = this.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                 ?? throw new ArgumentException($"Field '{fieldName}' not found");
 
-            _mapping.Add(new RegisterMapping
+            _holdingRegisterMap.Add(new RegisterMapping
+            {
+                FieldInfo = field,
+                StartRegister = startRegister,
+                RegisterCount = registerCount,
+                ConversionFunction = conversionFunction
+            });
+        }
+        finally
+        {
+            _mapLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Maps a range of input registers to a class field
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="registerCount">The number of registers to map.</param>
+    /// <param name="fieldName">The name of the field to map the registers to.</param>
+    /// <param name="conversionFunction">The custom conversion function to transform raw register values to the field type.</param>
+    protected void MapInputRegistersToField(ushort startRegister, int registerCount, string fieldName, Func<ushort[], object> conversionFunction)
+    {
+        _mapLock.Wait();
+        try
+        {
+            var field = this.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                ?? throw new ArgumentException($"Field '{fieldName}' not found");
+
+            _inputRegisterMap.Add(new RegisterMapping
             {
                 FieldInfo = field,
                 StartRegister = startRegister,
@@ -256,43 +359,8 @@ public abstract class ModbusPolledDevice
         await _mapLock.WaitAsync();
         try
         {
-            // TODO: add support for group reads (i.e. contiguously mapped registers)
-
-            foreach (var r in _mapping)
-            {
-                // read registers
-                ushort[] data;
-
-                try
-                {
-                    data = await _client.ReadHoldingRegisters(_address, r.StartRegister, r.RegisterCount);
-                }
-                catch (TimeoutException)
-                {
-                    break;
-                }
-
-                if (data.Length == 0)
-                {
-                    // TODO: should we notify or log or something?
-                    return;
-                }
-
-                if (r.PropertyInfo != null)
-                {
-                    UpdateProperty(data, r);
-                }
-                else if (r.FieldInfo != null)
-                {
-                    UpdateField(data, r);
-                }
-                else
-                {
-                    // no field or prop - should not be possible
-                    throw new ArgumentException();
-                }
-
-            }
+            await MoveHoldingRegistersToProperties();
+            await MoveInputRegistersToProperties();
         }
         finally
         {
@@ -303,6 +371,98 @@ public abstract class ModbusPolledDevice
         var et = Environment.TickCount - start;
         var delay = _refreshPeriosMs - et;
         _timer.Change(delay > MinimumPollDelayMs ? delay : MinimumPollDelayMs, -1);
+    }
+
+    private async Task MoveHoldingRegistersToProperties()
+    {
+        // TODO: add support for group reads (i.e. contiguously mapped registers)
+        foreach (var r in _holdingRegisterMap)
+        {
+            // read registers
+            ushort[] data;
+
+            try
+            {
+                data = await _client.ReadHoldingRegisters(_address, r.StartRegister, r.RegisterCount);
+            }
+            catch (TimeoutException)
+            {
+                CommTimeout?.Invoke(this, EventArgs.Empty);
+                break;
+            }
+            catch (Exception ex)
+            {
+                CommError?.Invoke(this, ex);
+                break;
+            }
+
+            if (data.Length == 0)
+            {
+                // TODO: should we notify or log or something?
+                return;
+            }
+
+            if (r.PropertyInfo != null)
+            {
+                UpdateProperty(data, r);
+            }
+            else if (r.FieldInfo != null)
+            {
+                UpdateField(data, r);
+            }
+            else
+            {
+                // no field or prop - should not be possible
+                throw new ArgumentException();
+            }
+
+        }
+    }
+
+    private async Task MoveInputRegistersToProperties()
+    {
+        // TODO: add support for group reads (i.e. contiguously mapped registers)
+        foreach (var r in _inputRegisterMap)
+        {
+            // read registers
+            ushort[] data;
+
+            try
+            {
+                data = await _client.ReadInputRegisters(_address, r.StartRegister, r.RegisterCount);
+            }
+            catch (TimeoutException)
+            {
+                CommTimeout?.Invoke(this, EventArgs.Empty);
+                break;
+            }
+            catch (Exception ex)
+            {
+                CommError?.Invoke(this, ex);
+                break;
+            }
+
+            if (data.Length == 0)
+            {
+                // TODO: should we notify or log or something?
+                return;
+            }
+
+            if (r.PropertyInfo != null)
+            {
+                UpdateProperty(data, r);
+            }
+            else if (r.FieldInfo != null)
+            {
+                UpdateField(data, r);
+            }
+            else
+            {
+                // no field or prop - should not be possible
+                throw new ArgumentException();
+            }
+
+        }
     }
 
     private void UpdateProperty(ushort[] data, RegisterMapping mapping)
@@ -327,6 +487,11 @@ public abstract class ModbusPolledDevice
                 mapping.PropertyInfo!.PropertyType == typeof(long))
             {
                 UpdateIntegerProperty(data, mapping);
+            }
+            else if (
+                mapping.PropertyInfo!.PropertyType == typeof(bool))
+            {
+                UpdateBooleanProperty(data, mapping);
             }
             else
             {
@@ -357,6 +522,11 @@ public abstract class ModbusPolledDevice
                 mapping.FieldInfo!.FieldType == typeof(long))
             {
                 UpdateIntegerField(data, mapping);
+            }
+            else if (
+                mapping.PropertyInfo!.PropertyType == typeof(bool))
+            {
+                UpdateBooleanField(data, mapping);
             }
             else
             {
@@ -448,6 +618,14 @@ public abstract class ModbusPolledDevice
         }
     }
 
+    private void UpdateBooleanProperty(ushort[] data, RegisterMapping mapping)
+    {
+        if (mapping.PropertyInfo!.PropertyType == typeof(bool))
+        {
+            mapping.PropertyInfo!.SetValue(this, data[0] != 0);
+        }
+    }
+
     private void UpdateDoubleProperty(ushort[] data, RegisterMapping mapping)
     {
         var final = Convert.ToDouble(GetValueByFormat(data, mapping.SourceFormat));
@@ -522,6 +700,14 @@ public abstract class ModbusPolledDevice
         else if (mapping.FieldInfo!.FieldType == typeof(float))
         {
             mapping.FieldInfo!.SetValue(this, Convert.ToSingle(final));
+        }
+    }
+
+    private void UpdateBooleanField(ushort[] data, RegisterMapping mapping)
+    {
+        if (mapping.FieldInfo!.FieldType == typeof(bool))
+        {
+            mapping.FieldInfo!.SetValue(this, data[0] != 0);
         }
     }
 }
