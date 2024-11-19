@@ -15,8 +15,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_refs", "_refs", "{F3A19D25
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Meadow.Contracts", "..\..\Meadow.Contracts\Source\Meadow.Contracts\Meadow.Contracts.csproj", "{B2CE678E-2C35-490E-B311-8401567D8ABA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "P9300", "..\..\support\P9300\P9300.csproj", "{70CADB4F-FF4B-4CEB-A7E6-1957463CBBAC}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Devices", "Devices", "{D2C2925B-3F73-483E-BE01-941E2847EA4E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meadow.Modbus.StepperOnline", "Devices\Meadow.Modbus.StepperOnline\Meadow.Modbus.StepperOnline.csproj", "{55CBD0E0-41F3-41D4-8A1E-D3D5889AAED5}"
@@ -41,10 +39,6 @@ Global
 		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B2CE678E-2C35-490E-B311-8401567D8ABA}.Release|Any CPU.Deploy.0 = Release|Any CPU
-		{70CADB4F-FF4B-4CEB-A7E6-1957463CBBAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{70CADB4F-FF4B-4CEB-A7E6-1957463CBBAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{70CADB4F-FF4B-4CEB-A7E6-1957463CBBAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{70CADB4F-FF4B-4CEB-A7E6-1957463CBBAC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{55CBD0E0-41F3-41D4-8A1E-D3D5889AAED5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{55CBD0E0-41F3-41D4-8A1E-D3D5889AAED5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{55CBD0E0-41F3-41D4-8A1E-D3D5889AAED5}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -55,7 +49,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B2CE678E-2C35-490E-B311-8401567D8ABA} = {F3A19D25-32FB-4420-B50D-220C86E5F8A0}
-		{70CADB4F-FF4B-4CEB-A7E6-1957463CBBAC} = {D2C2925B-3F73-483E-BE01-941E2847EA4E}
 		{55CBD0E0-41F3-41D4-8A1E-D3D5889AAED5} = {D2C2925B-3F73-483E-BE01-941E2847EA4E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
