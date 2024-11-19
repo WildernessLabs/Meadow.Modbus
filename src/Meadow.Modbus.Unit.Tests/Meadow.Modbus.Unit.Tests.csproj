@@ -22,7 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Devices\Meadow.Modbus.StepperOnline\Meadow.Modbus.StepperOnline.csproj" />
     <ProjectReference Include="..\Meadow.Modbus\Meadow.Modbus.csproj" />
   </ItemGroup>
 
