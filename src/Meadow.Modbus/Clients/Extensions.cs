@@ -12,7 +12,6 @@ public static class Extensions
     /// Converts a set of Modbus registers (ushort[]) to integers (int[]) assuming little-endina ordering
     /// </summary>
     /// <param name="registers"></param>
-    /// <returns></returns>
     public static int[] ConvertRegistersToInt32(this ushort[] registers)
     {
         var values = new int[registers.Length / 2];
@@ -26,6 +25,17 @@ public static class Extensions
         }
 
         return values;
+    }
+
+    /// <summary>
+    /// Converts ushort registers to a single Int32, starting at a specific offset
+    /// </summary>
+    /// <param name="registers">The registers</param>
+    /// <param name="startOffset">The offset in the registers to begine extraction</param>
+    /// <param name="swappedWords">True to convert from big-endian words</param>
+    public static int ExtractInt32(this ushort[] registers, int startOffset = 0, bool swappedWords = false)
+    {
+        return registers.AsSpan().ExtractInt32(startOffset, swappedWords);
     }
 
     /// <summary>
@@ -146,8 +156,21 @@ public static class Extensions
     /// <param name="registers">The registers</param>
     /// <param name="startOffset">The offset in the registers to begine extraction</param>
     /// <param name="swappedWords">True to convert from big-endian words</param>
+    public static double ExtractDouble(this ushort[] registers, int startOffset = 0, bool swappedWords = false)
+    {
+        return registers.AsSpan().ExtractDouble(startOffset, swappedWords);
+    }
+
+    /// <summary>
+    /// Converts 4 ushort registers to a IEEE 64 floating point, starting at a specific offset
+    /// </summary>
+    /// <param name="registers">The registers</param>
+    /// <param name="startOffset">The offset in the registers to begine extraction</param>
+    /// <param name="swappedWords">True to convert from big-endian words</param>
     public static double ExtractDouble(this Span<ushort> registers, int startOffset = 0, bool swappedWords = false)
     {
+        if (registers.Length < 4) throw new ArgumentException("registers does not contain enough data to extract a double");
+
         if (swappedWords)
         {
             byte[] value = BitConverter.GetBytes(registers[startOffset + 0])
@@ -168,6 +191,17 @@ public static class Extensions
 
             return BitConverter.ToDouble(value, 0);
         }
+    }
+
+    /// <summary>
+    /// Converts 2 ushort registers to a IEEE 32 floating point, starting at a specific offset
+    /// </summary>
+    /// <param name="registers">The registers</param>
+    /// <param name="startOffset">The offset in the registers to begine extraction</param>
+    /// <param name="swappedWords">True to convert from big-endian words</param>
+    public static float ExtractSingle(this ushort[] registers, int startOffset = 0, bool swappedWords = false)
+    {
+        return registers.AsSpan().ExtractSingle(startOffset, swappedWords);
     }
 
     /// <summary>

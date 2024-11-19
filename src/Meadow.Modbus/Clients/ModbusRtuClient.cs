@@ -144,13 +144,13 @@ public class ModbusRtuClient : ModbusClientBase
 
         switch (function)
         {
-            case ModbusFunction.WriteMultipleRegisters:
+            case ModbusFunction.WriteRegister:
             case ModbusFunction.WriteMultipleCoils:
             case ModbusFunction.WriteCoil:
                 bufferLen = 8; //fixed length
                 resultLen = 0; //no result data
                 break;
-            case ModbusFunction.WriteRegister:
+            case ModbusFunction.WriteMultipleRegisters:
                 bufferLen = 7 + header[headerLen - 1];
                 resultLen = header[2];
                 break;

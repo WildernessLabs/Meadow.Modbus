@@ -25,6 +25,11 @@ public abstract class ModbusPolledDevice
     public event EventHandler<Exception>? CommError;
 
     /// <summary>
+    /// Raised when data has been read from the device
+    /// </summary>
+    public event EventHandler? DataUpdated;
+
+    /// <summary>
     /// Represents the possible formats of source registers
     /// </summary>
     public enum SourceFormat
@@ -83,7 +88,8 @@ public abstract class ModbusPolledDevice
     /// </summary>
     public virtual void StartPolling()
     {
-        _timer.Change(_refreshPeriosMs, -1);
+        // trigger first read immediately - subsequent reads will be at the desired frequency
+        _timer.Change(0, -1);
     }
 
     /// <summary>
@@ -124,6 +130,17 @@ public abstract class ModbusPolledDevice
         {
             await _client.WriteHoldingRegisters(_address, startRegister, data);
         }
+    }
+
+    /// <summary>
+    /// Writes one or more values to the holding registers of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="count">The number of registers to read.</param>
+    /// <returns>A task representing the asynchronous write operation.</returns>
+    protected Task<ushort[]> ReadHoldingRegisters(ushort startRegister, int count)
+    {
+        return _client.ReadHoldingRegisters(_address, startRegister, count);
     }
 
     /// <summary>
@@ -361,6 +378,8 @@ public abstract class ModbusPolledDevice
         {
             await MoveHoldingRegistersToProperties();
             await MoveInputRegistersToProperties();
+
+            DataUpdated?.Invoke(this, EventArgs.Empty);
         }
         finally
         {
@@ -517,16 +536,26 @@ public abstract class ModbusPolledDevice
             }
             else if (
                 mapping.FieldInfo!.FieldType == typeof(byte) ||
+                mapping.FieldInfo!.FieldType == typeof(ushort) ||
                 mapping.FieldInfo!.FieldType == typeof(short) ||
                 mapping.FieldInfo!.FieldType == typeof(int) ||
+                mapping.FieldInfo!.FieldType == typeof(uint) ||
                 mapping.FieldInfo!.FieldType == typeof(long))
             {
                 UpdateIntegerField(data, mapping);
             }
             else if (
-                mapping.PropertyInfo!.PropertyType == typeof(bool))
+                mapping.FieldInfo!.FieldType == typeof(bool))
             {
                 UpdateBooleanField(data, mapping);
+            }
+            else if (
+                mapping.FieldInfo!.FieldType == typeof(ushort[]) ||
+                mapping.FieldInfo!.FieldType == typeof(short[]))
+            {
+                // the field is a ref value, so this is valid
+                ushort[] f = (ushort[])mapping.FieldInfo.GetValue(this);
+                Array.Copy(data, f, Math.Min(data.Length, f.Length));
             }
             else
             {
@@ -670,9 +699,17 @@ public abstract class ModbusPolledDevice
         {
             mapping.FieldInfo!.SetValue(this, Convert.ToInt16(final));
         }
+        else if (mapping.FieldInfo!.FieldType == typeof(ushort))
+        {
+            mapping.FieldInfo!.SetValue(this, Convert.ToUInt16(final));
+        }
         else if (mapping.FieldInfo!.FieldType == typeof(int))
         {
             mapping.FieldInfo!.SetValue(this, Convert.ToInt32(final));
+        }
+        else if (mapping.FieldInfo!.FieldType == typeof(uint))
+        {
+            mapping.FieldInfo!.SetValue(this, Convert.ToUInt32(final));
         }
         else if (mapping.FieldInfo!.FieldType == typeof(long))
         {
