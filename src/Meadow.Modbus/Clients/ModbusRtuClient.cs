@@ -36,7 +36,7 @@ public class ModbusRtuClient : ModbusClientBase
     public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
     {
         _port = port;
-        _port.WriteTimeout = _port.ReadTimeout = TimeSpan.FromSeconds(5);
+        _port.WriteTimeout = _port.ReadTimeout = Timeout;
         _enable = enablePort;
     }
 
@@ -144,13 +144,13 @@ public class ModbusRtuClient : ModbusClientBase
 
         switch (function)
         {
-            case ModbusFunction.WriteMultipleRegisters:
+            case ModbusFunction.WriteRegister:
             case ModbusFunction.WriteMultipleCoils:
             case ModbusFunction.WriteCoil:
                 bufferLen = 8; //fixed length
                 resultLen = 0; //no result data
                 break;
-            case ModbusFunction.WriteRegister:
+            case ModbusFunction.WriteMultipleRegisters:
                 bufferLen = 7 + header[headerLen - 1];
                 resultLen = header[2];
                 break;
