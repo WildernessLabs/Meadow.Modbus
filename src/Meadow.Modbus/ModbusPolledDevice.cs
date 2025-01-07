@@ -25,6 +25,11 @@ public abstract class ModbusPolledDevice
     public event EventHandler<Exception>? CommError;
 
     /// <summary>
+    /// Raised when data has been read from the device
+    /// </summary>
+    public event EventHandler? DataUpdated;
+
+    /// <summary>
     /// Represents the possible formats of source registers
     /// </summary>
     public enum SourceFormat
@@ -70,8 +75,12 @@ public abstract class ModbusPolledDevice
     /// </summary>
     public static readonly TimeSpan DefaultRefreshPeriod = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// Gets or sets the device's address on the bus
+    /// </summary>
+    protected byte BusAddress { get; set; }
+
     private ModbusClientBase _client;
-    private byte _address;
     private Timer _timer;
     private int _refreshPeriosMs;
 
@@ -83,7 +92,8 @@ public abstract class ModbusPolledDevice
     /// </summary>
     public virtual void StartPolling()
     {
-        _timer.Change(_refreshPeriosMs, -1);
+        // trigger first read immediately - subsequent reads will be at the desired frequency
+        _timer.Change(0, -1);
     }
 
     /// <summary>
@@ -103,7 +113,7 @@ public abstract class ModbusPolledDevice
     public ModbusPolledDevice(ModbusClientBase client, byte modbusAddress, TimeSpan? refreshPeriod = null)
     {
         _client = client;
-        _address = modbusAddress;
+        BusAddress = modbusAddress;
         _refreshPeriosMs = (int)(refreshPeriod ?? DefaultRefreshPeriod).TotalMilliseconds;
         _timer = new Timer(RefreshTimerProc, null, -1, -1);
     }
@@ -118,12 +128,23 @@ public abstract class ModbusPolledDevice
     {
         if (data.Length == 1)
         {
-            await _client.WriteHoldingRegister(_address, startRegister, data[0]);
+            await _client.WriteHoldingRegister(BusAddress, startRegister, data[0]);
         }
         else
         {
-            await _client.WriteHoldingRegisters(_address, startRegister, data);
+            await _client.WriteHoldingRegisters(BusAddress, startRegister, data);
         }
+    }
+
+    /// <summary>
+    /// Reads one or more values from the holding registers of the Modbus device.
+    /// </summary>
+    /// <param name="startRegister">The starting register address.</param>
+    /// <param name="count">The number of registers to read.</param>
+    /// <returns>A task representing the asynchronous write operation.</returns>
+    protected Task<ushort[]> ReadHoldingRegisters(ushort startRegister, int count)
+    {
+        return _client.ReadHoldingRegisters(BusAddress, startRegister, count);
     }
 
     /// <summary>
@@ -133,7 +154,7 @@ public abstract class ModbusPolledDevice
     /// <returns>A task representing the asynchronous write operation.</returns>
     protected async Task<bool> ReadCoil(ushort register)
     {
-        var registers = await _client.ReadCoils(_address, register, 1);
+        var registers = await _client.ReadCoils(BusAddress, register, 1);
         return registers[0];
     }
 
@@ -145,7 +166,7 @@ public abstract class ModbusPolledDevice
     /// <returns>A task representing the asynchronous write operation.</returns>
     protected async Task WriteCoil(ushort register, bool value)
     {
-        await _client.WriteCoil(_address, register, value);
+        await _client.WriteCoil(BusAddress, register, value);
     }
 
     /// <summary>
@@ -361,6 +382,8 @@ public abstract class ModbusPolledDevice
         {
             await MoveHoldingRegistersToProperties();
             await MoveInputRegistersToProperties();
+
+            DataUpdated?.Invoke(this, EventArgs.Empty);
         }
         finally
         {
@@ -383,7 +406,7 @@ public abstract class ModbusPolledDevice
 
             try
             {
-                data = await _client.ReadHoldingRegisters(_address, r.StartRegister, r.RegisterCount);
+                data = await _client.ReadHoldingRegisters(BusAddress, r.StartRegister, r.RegisterCount);
             }
             catch (TimeoutException)
             {
@@ -429,7 +452,7 @@ public abstract class ModbusPolledDevice
 
             try
             {
-                data = await _client.ReadInputRegisters(_address, r.StartRegister, r.RegisterCount);
+                data = await _client.ReadInputRegisters(BusAddress, r.StartRegister, r.RegisterCount);
             }
             catch (TimeoutException)
             {
@@ -517,16 +540,26 @@ public abstract class ModbusPolledDevice
             }
             else if (
                 mapping.FieldInfo!.FieldType == typeof(byte) ||
+                mapping.FieldInfo!.FieldType == typeof(ushort) ||
                 mapping.FieldInfo!.FieldType == typeof(short) ||
                 mapping.FieldInfo!.FieldType == typeof(int) ||
+                mapping.FieldInfo!.FieldType == typeof(uint) ||
                 mapping.FieldInfo!.FieldType == typeof(long))
             {
                 UpdateIntegerField(data, mapping);
             }
             else if (
-                mapping.PropertyInfo!.PropertyType == typeof(bool))
+                mapping.FieldInfo!.FieldType == typeof(bool))
             {
                 UpdateBooleanField(data, mapping);
+            }
+            else if (
+                mapping.FieldInfo!.FieldType == typeof(ushort[]) ||
+                mapping.FieldInfo!.FieldType == typeof(short[]))
+            {
+                // the field is a ref value, so this is valid
+                ushort[] f = (ushort[])mapping.FieldInfo.GetValue(this);
+                Array.Copy(data, f, Math.Min(data.Length, f.Length));
             }
             else
             {
@@ -670,9 +703,17 @@ public abstract class ModbusPolledDevice
         {
             mapping.FieldInfo!.SetValue(this, Convert.ToInt16(final));
         }
+        else if (mapping.FieldInfo!.FieldType == typeof(ushort))
+        {
+            mapping.FieldInfo!.SetValue(this, Convert.ToUInt16(final));
+        }
         else if (mapping.FieldInfo!.FieldType == typeof(int))
         {
             mapping.FieldInfo!.SetValue(this, Convert.ToInt32(final));
+        }
+        else if (mapping.FieldInfo!.FieldType == typeof(uint))
+        {
+            mapping.FieldInfo!.SetValue(this, Convert.ToUInt32(final));
         }
         else if (mapping.FieldInfo!.FieldType == typeof(long))
         {

@@ -3,6 +3,9 @@ using System;
 
 namespace Meadow.Modbus.Voltaic;
 
+/// <summary>
+/// Represents a Voltaic Systems V10x solar charge controller and battery
+/// </summary>
 public class V10x : ModbusPolledDevice
 {
     private double _rawBatteryVoltage;
@@ -13,17 +16,51 @@ public class V10x : ModbusPolledDevice
     private double _rawEnvironmentTemp;
     private double _rawControllerTemp;
 
-    public const int DefaultModbusAddress = 1;
-    public const int DefaultBaudRate = 9600;
-
     private const ushort BatteryOutputSwitchRegister = 0;
 
+    /// <summary>
+    /// The default Modbus address for the V10x device.
+    /// </summary>
+    public const int DefaultModbusAddress = 1;
+
+    /// <summary>
+    /// The default baud rate for communication with the V10x device.
+    /// </summary>
+    public const int DefaultBaudRate = 9600;
+
+    /// <summary>
+    /// Gets the battery voltage.
+    /// </summary>
     public Voltage BatteryVoltage => new Voltage(_rawBatteryVoltage, Voltage.UnitType.Volts);
+
+    /// <summary>
+    /// Gets the input voltage.
+    /// </summary>
     public Voltage InputVoltage => new Voltage(_rawInputVoltage, Voltage.UnitType.Volts);
+
+    /// <summary>
+    /// Gets the input current.
+    /// </summary>
     public Current InputCurrent => new Current(_rawInputCurrent, Current.UnitType.Amps);
+
+    /// <summary>
+    /// Gets the load voltage.
+    /// </summary>
     public Voltage LoadVoltage => new Voltage(_rawLoadVoltage, Voltage.UnitType.Volts);
+
+    /// <summary>
+    /// Gets the load current.
+    /// </summary>
     public Current LoadCurrent => new Current(_rawLoadCurrent, Current.UnitType.Amps);
+
+    /// <summary>
+    /// Gets the environment temperature.
+    /// </summary>
     public Temperature EnvironmentTemp => new Temperature(_rawEnvironmentTemp, Temperature.UnitType.Celsius);
+
+    /// <summary>
+    /// Gets the controller temperature.
+    /// </summary>
     public Temperature ControllerTemp => new Temperature(_rawControllerTemp, Temperature.UnitType.Celsius);
 
     public V10x(
@@ -82,6 +119,9 @@ public class V10x : ModbusPolledDevice
             );
     }
 
+    /// <summary>
+    /// Sets the battery output switch state.
+    /// </summary>
     public bool BatteryOutput
     {
         set => _ = WriteCoil(BatteryOutputSwitchRegister, value);
