@@ -20,9 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="icon.png" Pack="true" PackagePath="" />
-    <PackageReference Include="System.IO.Ports" Version="6.0.0" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Meadow.Contracts" Version="1.14.0" />
+    <PackageReference Include="Meadow.Contracts" Version="1.15.0" />
   </ItemGroup>
 </Project>
