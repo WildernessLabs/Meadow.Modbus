@@ -88,9 +88,12 @@ public class ModbusRtuClient : ModbusClientBase
 
         while (_port.BytesToRead < 5)
         {
-            await Task.Delay(10);
             t += 10;
-            if (_port.ReadTimeout.TotalMilliseconds > 0 && t > _port.ReadTimeout.TotalMilliseconds) throw new TimeoutException();
+            if (_port.ReadTimeout.TotalMilliseconds > 0 && t > _port.ReadTimeout.TotalMilliseconds)
+            {
+                throw new TimeoutException();
+            }
+            await Task.Delay(10);
         }
 
         int headerLen = function switch
@@ -118,7 +121,7 @@ public class ModbusRtuClient : ModbusClientBase
             read = 0;
             while (read < 2)
             {
-                _port.Read(errpacket, 3 + read, 2 - read);
+                read += _port.Read(errpacket, 3 + read, 2 - read);
             }
 
             var errorCode = (ModbusErrorCode)errpacket[2];
@@ -136,7 +139,11 @@ public class ModbusRtuClient : ModbusClientBase
         // read the remainder of the header
         if (headerLen > 3)
         {
-            _port.Read(header, 3, headerLen - 3);
+            read = 0;
+            while (read < headerLen - 2)
+            {
+                read += _port.Read(header, 3, headerLen - 3);
+            }
         }
 
         int bufferLen;
@@ -191,7 +198,7 @@ public class ModbusRtuClient : ModbusClientBase
         var result = new byte[resultLen];
         Array.Copy(buffer, headerLen, result, 0, result.Length);
 
-        return await Task.FromResult(result);
+        return result;
     }
 
     /// <inheritdoc/>
