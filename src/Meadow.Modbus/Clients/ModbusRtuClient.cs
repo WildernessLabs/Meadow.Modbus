@@ -128,6 +128,9 @@ public class ModbusRtuClient : ModbusClientBase
 
             expectedCrc = RtuHelpers.Crc(errpacket, 0, errpacket.Length - 2);
             actualCrc = (ushort)(errpacket[errpacket.Length - 2] | errpacket[errpacket.Length - 1] << 8);
+
+            _port.ClearReceiveBuffer();
+
             if (expectedCrc != actualCrc)
             {
                 throw new CrcException($"CRC error in {errorCode} message", expectedCrc, actualCrc, errpacket);
@@ -185,6 +188,9 @@ public class ModbusRtuClient : ModbusClientBase
         // do a CRC on all but the last 2 bytes, then see if that matches the last 2
         expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
         actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
+
+        _port.ClearReceiveBuffer();
+
         if (expectedCrc != actualCrc)
         {
             throw new CrcException("CRC error in response message", expectedCrc, actualCrc, buffer);
@@ -205,6 +211,10 @@ public class ModbusRtuClient : ModbusClientBase
     protected override Task DeliverMessage(byte[] message)
     {
         SetEnable(true);
+
+        // Clear the recieve buffer. if a pervious request timed out but a message was still recieved it will now be in the recieve buffer.
+        // This can happen if using modbus over zigbee (or any other radio/mesh protocol) or is the timeout is too short 
+        _port.ClearReceiveBuffer();
 
         _port.Write(message);
         // the above call to the OS transfers data to the serial buffer - it does *not* mean all data has gone out on the wire
