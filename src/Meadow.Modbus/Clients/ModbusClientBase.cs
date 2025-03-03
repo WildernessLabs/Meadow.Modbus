@@ -129,7 +129,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <summary>
     /// Gets or sets the Timeout value for reading / writing to a Modbus device.
     /// </summary>
-    public TimeSpan Timeout { get; protected set; } = TimeSpan.FromSeconds(5);
+    public TimeSpan Timeout { get; protected set; } = TimeSpan.FromMilliseconds(100);
 
     /// <summary>
     /// Writes a single value to a holding register on the Modbus device.
