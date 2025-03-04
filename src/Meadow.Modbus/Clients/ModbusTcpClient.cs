@@ -133,6 +133,7 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     public override void Disconnect()
     {
         _client.Close();
+        IsConnected = false;
     }
 
     /// <inheritdoc/>
@@ -232,31 +233,26 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
         }
         if (!_client.Connected)
         {
-            throw new SocketException();
+            // adding 'auto-connect' here means that a single exception in a loop wont throw out all subsiquent requests if the user doesnt check 'isConnected' on each call. 
+            await Connect();
+            //throw new Exception("Disconnected from server");
+            //throw new SocketException(); // This throws 'The operation completed successfully.' that is very misleading.
         }
 
-        try
+        Task count = _client.GetStream().WriteAsync(message, 0, message.Length);
+
+        // send timeout
+        var t = 0;
+
+        while (!count.IsCompleted)
         {
-            Task count = _client.GetStream().WriteAsync(message, 0, message.Length);
-
-            // send timeout
-            var t = 0;
-
-            while (!count.IsCompleted)
+            await Task.Delay(10);
+            t += 10;
+            if (Timeout.TotalMilliseconds > 0 && t > Timeout.TotalMilliseconds)
             {
-                await Task.Delay(10);
-                t += 10;
-                if (Timeout.TotalMilliseconds > 0 && t > Timeout.TotalMilliseconds)
-                {
-                    _client.Close();
-                    throw new TimeoutException();
-                }
+                _client.Close();
+                throw new TimeoutException();
             }
-        }
-        catch
-        {
-            IsConnected = false;
-            _client.Close();
         }
     }
 
@@ -277,7 +273,8 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
 
         if (!_client.Connected)
         {
-            throw new SocketException();
+            throw new Exception("Disconnected from server");
+            //throw new SocketException(); // This throws 'The operation completed successfully.' that is very misleading.
         }
 
         // responses (even an error) are at least 9 bytes - read enough to know the status
@@ -295,7 +292,9 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
             t += 10;
             if (Timeout.TotalMilliseconds > 0 && t > Timeout.TotalMilliseconds)
             {
-                _client.Close();
+                // Diconnecting here might not be what we want. 
+                // If the server is a gateway with gateway exceptions turned off this could just be a serial device timeout. But, at least by disconnecting we reset the state.
+                Disconnect(); 
                 throw new TimeoutException();
             }
         }
@@ -313,7 +312,7 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
 
         if (!count.IsCompleted)
         {
-            _client.Close();
+            Disconnect();
             throw new Exception("Incomplete Response");
         }
 

@@ -1,5 +1,6 @@
 ﻿using Meadow.Hardware;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Meadow.Modbus;
@@ -13,6 +14,7 @@ public class ModbusRtuClient : ModbusClientBase
 
     private ISerialPort _port;
     private IDigitalOutputPort? _enable;
+    private Stopwatch _stopwatch = new Stopwatch();
 
     /// <summary>
     /// Gets the name of the port used by the Modbus RTU client.
@@ -36,7 +38,8 @@ public class ModbusRtuClient : ModbusClientBase
     public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
     {
         _port = port;
-        _port.WriteTimeout = _port.ReadTimeout = Timeout;
+        _port.WriteTimeout = Timeout;
+        _port.ReadTimeout = Timeout;
         _enable = enablePort;
     }
 
@@ -82,15 +85,16 @@ public class ModbusRtuClient : ModbusClientBase
     protected override async Task<byte[]> ReadResult(ModbusFunction function)
     {
         // the response must be at least 5 bytes, so wait for at least that much to come in
-        var t = 0;
+        _stopwatch.Restart();
         ushort expectedCrc;
         ushort actualCrc;
 
         while (_port.BytesToRead < 5)
         {
-            t += 10;
-            if (_port.ReadTimeout.TotalMilliseconds > 0 && t > _port.ReadTimeout.TotalMilliseconds)
+            if ((Timeout.TotalMilliseconds > 0) && (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds))
             {
+                _port.ClearReceiveBuffer();
+
                 throw new TimeoutException();
             }
             await Task.Delay(10);
@@ -108,6 +112,11 @@ public class ModbusRtuClient : ModbusClientBase
         var read = 0;
         while (read < 3)
         {
+            if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+            {
+                _port.ClearReceiveBuffer();
+                throw new TimeoutException();
+            }
             read += _port.Read(header, read, 3 - read);
         }
 
@@ -121,6 +130,11 @@ public class ModbusRtuClient : ModbusClientBase
             read = 0;
             while (read < 2)
             {
+                if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+                {
+                    _port.ClearReceiveBuffer();
+                    throw new TimeoutException();
+                }
                 read += _port.Read(errpacket, 3 + read, 2 - read);
             }
 
@@ -128,6 +142,9 @@ public class ModbusRtuClient : ModbusClientBase
 
             expectedCrc = RtuHelpers.Crc(errpacket, 0, errpacket.Length - 2);
             actualCrc = (ushort)(errpacket[errpacket.Length - 2] | errpacket[errpacket.Length - 1] << 8);
+
+            _port.ClearReceiveBuffer();
+
             if (expectedCrc != actualCrc)
             {
                 throw new CrcException($"CRC error in {errorCode} message", expectedCrc, actualCrc, errpacket);
@@ -142,6 +159,11 @@ public class ModbusRtuClient : ModbusClientBase
             read = 0;
             while (read < headerLen - 2)
             {
+                if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+                {
+                    _port.ClearReceiveBuffer();
+                    throw new TimeoutException();
+                }
                 read += _port.Read(header, 3, headerLen - 3);
             }
         }
@@ -179,12 +201,20 @@ public class ModbusRtuClient : ModbusClientBase
         read = headerLen;
         while (read < buffer.Length)
         {
+            if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+            {
+                _port.ClearReceiveBuffer();
+                throw new TimeoutException();
+            }
             read += _port.Read(buffer, read, buffer.Length - read);
         }
 
         // do a CRC on all but the last 2 bytes, then see if that matches the last 2
         expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
         actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
+
+        _port.ClearReceiveBuffer();
+
         if (expectedCrc != actualCrc)
         {
             throw new CrcException("CRC error in response message", expectedCrc, actualCrc, buffer);
@@ -205,6 +235,10 @@ public class ModbusRtuClient : ModbusClientBase
     protected override Task DeliverMessage(byte[] message)
     {
         SetEnable(true);
+
+        // Clear the recieve buffer. if a pervious request timed out but a message was still recieved it will now be in the recieve buffer.
+        // This can happen if using modbus over zigbee (or any other radio/mesh protocol) or is the timeout is too short 
+        _port.ClearReceiveBuffer();
 
         _port.Write(message);
         // the above call to the OS transfers data to the serial buffer - it does *not* mean all data has gone out on the wire
