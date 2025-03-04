@@ -1,6 +1,4 @@
 .vs/
 bin/
 obj/
-/src/Meadow.Modbus/Meadow.Modbus.csproj
 /.gitignore
-/src/Meadow.Modbus/Meadow.Modbus.csproj
