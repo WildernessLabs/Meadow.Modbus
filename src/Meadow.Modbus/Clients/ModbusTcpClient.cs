@@ -192,6 +192,12 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     }
 
     /// <inheritdoc/>
+    protected override byte[] GenerateReportMessage(byte modbusAddress)
+    {
+        throw new NotSupportedException("Modbus function 0x11 is not supported over TCP");
+    }
+
+    /// <inheritdoc/>
     protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
     {
         if (registerCount > ushort.MaxValue) throw new ArgumentException();
@@ -294,7 +300,7 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
             {
                 // Diconnecting here might not be what we want. 
                 // If the server is a gateway with gateway exceptions turned off this could just be a serial device timeout. But, at least by disconnecting we reset the state.
-                Disconnect(); 
+                Disconnect();
                 throw new TimeoutException();
             }
         }

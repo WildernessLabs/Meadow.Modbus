@@ -40,7 +40,7 @@ public class ModbusSerialVoltaicBatteryTests
                 Debug.WriteLine($"Controller temp: {controller.ControllerTemp.Fahrenheit:N2} F");
                 //                Debug.WriteLine($"Battery output:  {controller.BatteryOutput}");
 
-                controller.BatteryOutput = (i % 2 == 0);
+                controller.BatteryOutput = (i++ % 2 == 0);
             }
         }
     }

@@ -34,12 +34,23 @@ public class ModbusRtuClient : ModbusClientBase
     /// Initializes a new instance of the <see cref="ModbusRtuClient"/> class.
     /// </summary>
     /// <param name="port">The serial port to use for communication.</param>
-    /// <param name="enablePort">The optional digital output port for enabling communication.</param>
-    public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
+    /// <param name="timeout">The timeout period for communications</param>
+    public ModbusRtuClient(ISerialPort port, TimeSpan timeout)
     {
         _port = port;
-        _port.WriteTimeout = Timeout;
-        _port.ReadTimeout = Timeout;
+        Timeout = timeout;
+
+        port.ReadTimeout = port.WriteTimeout = Timeout;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModbusRtuClient"/> class.
+    /// </summary>
+    /// <param name="port">The serial port to use for communication.</param>
+    /// <param name="enablePort">The optional digital output port for enabling communication.</param>
+    public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
+        : this(port, TimeSpan.FromSeconds(5))
+    {
         _enable = enablePort;
     }
 
@@ -86,149 +97,160 @@ public class ModbusRtuClient : ModbusClientBase
     {
         // the response must be at least 5 bytes, so wait for at least that much to come in
         _stopwatch.Restart();
-        ushort expectedCrc;
-        ushort actualCrc;
-
-        while (_port.BytesToRead < 5)
+        try
         {
-            if ((Timeout.TotalMilliseconds > 0) && (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds))
+            ushort expectedCrc;
+            ushort actualCrc;
+
+            while (_port.BytesToRead < 5)
             {
-                _port.ClearReceiveBuffer();
+                if ((Timeout.TotalMilliseconds > 0) && (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds))
+                {
+                    _port.ClearReceiveBuffer();
 
-                throw new TimeoutException();
+                    throw new TimeoutException();
+                }
+                await Task.Delay(10);
             }
-            await Task.Delay(10);
-        }
 
-        int headerLen = function switch
-        {
-            ModbusFunction.WriteMultipleRegisters => 6,
-            _ => 3
-        };
-
-        var header = new byte[headerLen];
-
-        // first read 3 bytes so we can look for an error
-        var read = 0;
-        while (read < 3)
-        {
-            if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+            int headerLen = function switch
             {
-                _port.ClearReceiveBuffer();
-                throw new TimeoutException();
-            }
-            read += _port.Read(header, read, 3 - read);
-        }
+                ModbusFunction.WriteMultipleRegisters => 6,
+                _ => 3
+            };
 
-        // check for an error bit (MSB in byte 2)
-        if ((header[1] & 0x80) != 0)
-        {
-            // an error response has come back - read the remaining 2 bytes (CRC of the error)
-            var errpacket = new byte[5];
-            Array.Copy(header, 0, errpacket, 0, 3);
+            var header = new byte[headerLen];
 
-            read = 0;
-            while (read < 2)
+            // first read 3 bytes so we can look for an error
+            var read = 0;
+            while (read < 3)
             {
                 if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
                 {
                     _port.ClearReceiveBuffer();
                     throw new TimeoutException();
                 }
-                read += _port.Read(errpacket, 3 + read, 2 - read);
+                read += _port.Read(header, read, 3 - read);
             }
 
-            var errorCode = (ModbusErrorCode)errpacket[2];
+            // check for an error bit (MSB in byte 2)
+            if ((header[1] & 0x80) != 0)
+            {
+                // an error response has come back - read the remaining 2 bytes (CRC of the error)
+                var errpacket = new byte[5];
+                Array.Copy(header, 0, errpacket, 0, 3);
 
-            expectedCrc = RtuHelpers.Crc(errpacket, 0, errpacket.Length - 2);
-            actualCrc = (ushort)(errpacket[errpacket.Length - 2] | errpacket[errpacket.Length - 1] << 8);
+                read = 0;
+                while (read < 2)
+                {
+                    if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+                    {
+                        _port.ClearReceiveBuffer();
+                        throw new TimeoutException();
+                    }
+                    read += _port.Read(errpacket, 3 + read, 2 - read);
+                }
+
+                var errorCode = (ModbusErrorCode)errpacket[2];
+
+                expectedCrc = RtuHelpers.Crc(errpacket, 0, errpacket.Length - 2);
+                actualCrc = (ushort)(errpacket[errpacket.Length - 2] | errpacket[errpacket.Length - 1] << 8);
+
+            _port.ClearReceiveBuffer();
+
+                if (expectedCrc != actualCrc)
+                {
+                    throw new CrcException($"CRC error in {errorCode} message", expectedCrc, actualCrc, errpacket);
+                }
+
+                throw new ModbusException(errorCode, function);
+            }
+
+            // read the remainder of the header
+            if (headerLen > 3)
+            {
+                read = 0;
+                while (read < headerLen - 2)
+                {
+                    if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+                    {
+                        _port.ClearReceiveBuffer();
+                        throw new TimeoutException();
+                    }
+                    read += _port.Read(header, 3, headerLen - 3);
+                }
+            }
+
+            int bufferLen;
+            int resultLen;
+
+            switch (function)
+            {
+                case ModbusFunction.WriteRegister:
+                case ModbusFunction.WriteMultipleCoils:
+                case ModbusFunction.WriteCoil:
+                    bufferLen = 8; //fixed length
+                    resultLen = 0; //no result data
+                    break;
+                case ModbusFunction.WriteMultipleRegisters:
+                    bufferLen = 7 + header[headerLen - 1];
+                    resultLen = header[2];
+                    break;
+                case ModbusFunction.ReadHoldingRegister:
+                    bufferLen = 5 + header[headerLen - 1];
+                    resultLen = header[2];
+                    break;
+                case ModbusFunction.ReportId:
+                    bufferLen = 5 + header[headerLen - 1] + 1; // run indicator byte right before the CRC
+                    resultLen = header[2];
+                    break;
+                default:
+                    bufferLen = 5 + header[headerLen - 1];
+                    resultLen = header[2];
+                    break;
+            }
+
+            var buffer = new byte[bufferLen]; // header + length + CRC
+
+            // the CRC includes the header, so we need those in the buffer
+            Array.Copy(header, buffer, headerLen);
+
+            read = headerLen;
+            while (read < buffer.Length)
+            {
+                if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
+                {
+                    _port.ClearReceiveBuffer();
+                    throw new TimeoutException();
+                }
+                read += _port.Read(buffer, read, buffer.Length - read);
+            }
+
+            // do a CRC on all but the last 2 bytes, then see if that matches the last 2
+            expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
+            actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
 
             _port.ClearReceiveBuffer();
 
             if (expectedCrc != actualCrc)
             {
-                throw new CrcException($"CRC error in {errorCode} message", expectedCrc, actualCrc, errpacket);
+                throw new CrcException("CRC error in response message", expectedCrc, actualCrc, buffer);
             }
 
-            throw new ModbusException(errorCode, function);
-        }
-
-        // read the remainder of the header
-        if (headerLen > 3)
-        {
-            read = 0;
-            while (read < headerLen - 2)
-            {
-                if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
-                {
-                    _port.ClearReceiveBuffer();
-                    throw new TimeoutException();
-                }
-                read += _port.Read(header, 3, headerLen - 3);
+            if (resultLen == 0)
+            {   //happens on write multiples
+                return new byte[0];
             }
+
+            var result = new byte[resultLen];
+            Array.Copy(buffer, headerLen, result, 0, result.Length);
+
+            return result;
         }
-
-        int bufferLen;
-        int resultLen;
-
-        switch (function)
+        finally
         {
-            case ModbusFunction.WriteRegister:
-            case ModbusFunction.WriteMultipleCoils:
-            case ModbusFunction.WriteCoil:
-                bufferLen = 8; //fixed length
-                resultLen = 0; //no result data
-                break;
-            case ModbusFunction.WriteMultipleRegisters:
-                bufferLen = 7 + header[headerLen - 1];
-                resultLen = header[2];
-                break;
-            case ModbusFunction.ReadHoldingRegister:
-                bufferLen = 5 + header[headerLen - 1];
-                resultLen = header[2];
-                break;
-            default:
-                bufferLen = 5 + header[headerLen - 1];
-                resultLen = header[2];
-                break;
+            _stopwatch.Stop();
         }
-
-        var buffer = new byte[bufferLen]; // header + length + CRC
-
-        // the CRC includes the header, so we need those in the buffer
-        Array.Copy(header, buffer, headerLen);
-
-        read = headerLen;
-        while (read < buffer.Length)
-        {
-            if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
-            {
-                _port.ClearReceiveBuffer();
-                throw new TimeoutException();
-            }
-            read += _port.Read(buffer, read, buffer.Length - read);
-        }
-
-        // do a CRC on all but the last 2 bytes, then see if that matches the last 2
-        expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
-        actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
-
-        _port.ClearReceiveBuffer();
-
-        if (expectedCrc != actualCrc)
-        {
-            throw new CrcException("CRC error in response message", expectedCrc, actualCrc, buffer);
-        }
-
-        if (resultLen == 0)
-        {   //happens on write multiples
-            return new byte[0];
-        }
-
-        var result = new byte[resultLen];
-        Array.Copy(buffer, headerLen, result, 0, result.Length);
-
-        return result;
     }
 
     /// <inheritdoc/>
@@ -249,6 +271,17 @@ public class ModbusRtuClient : ModbusClientBase
         SetEnable(false);
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    protected override byte[] GenerateReportMessage(byte modbusAddress)
+    {
+        var message = new byte[4]; // fn 0x11 is always 4 bytes
+        message[0] = modbusAddress;
+        message[1] = (byte)0x11;
+        RtuHelpers.FillCRC(message);
+
+        return message;
     }
 
     /// <inheritdoc/>

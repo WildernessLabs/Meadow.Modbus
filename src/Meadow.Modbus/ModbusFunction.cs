@@ -46,6 +46,11 @@ public enum ModbusFunction : byte
     WriteMultipleRegisters = 16,
 
     /// <summary>
+    /// Modbus function code for reading a device ID (17).
+    /// </summary>
+    ReportId = 17,
+
+    /// <summary>
     /// Modbus function code for reading and writing multiple registers (23).
     /// </summary>
     ReadWriteMultipleRegisters = 23
