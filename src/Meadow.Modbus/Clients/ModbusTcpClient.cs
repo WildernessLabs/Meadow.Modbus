@@ -192,6 +192,12 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     }
 
     /// <inheritdoc/>
+    protected override byte[] GenerateReportMessage(byte modbusAddress)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc/>
     protected override byte[] GenerateReadMessage(byte modbusAddress, ModbusFunction function, ushort startRegister, int registerCount)
     {
         if (registerCount > ushort.MaxValue) throw new ArgumentException();

@@ -12,7 +12,7 @@ public class ModbusSerialTStatTests
     [Fact]
     public async void PolledDeviceTest()
     {
-        using (var port = new SerialPortShim("COM3", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
+        using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
         {
             port.ReadTimeout = TimeSpan.FromSeconds(15);
             port.Open();
@@ -65,7 +65,7 @@ public class ModbusSerialTStatTests
     [Fact]
     public async void MultipleWriteHoldingRegisterTest()
     {
-        using (var port = new SerialPortShim("COM3", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
+        using (var port = new SerialPortShim("COM4", 19200, Hardware.Parity.None, 8, Hardware.StopBits.One))
         {
             port.ReadTimeout = TimeSpan.FromSeconds(15);
             port.Open();

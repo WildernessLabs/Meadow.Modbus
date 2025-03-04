@@ -38,8 +38,10 @@ public class ModbusRtuClient : ModbusClientBase
     public ModbusRtuClient(ISerialPort port, IDigitalOutputPort? enablePort = null)
     {
         _port = port;
-        _port.WriteTimeout = Timeout;
-        _port.ReadTimeout = Timeout;
+
+        if (port.ReadTimeout.TotalMilliseconds <= 0) { port.ReadTimeout = Timeout; }
+        if (port.WriteTimeout.TotalMilliseconds <= 0) { port.WriteTimeout = Timeout; }
+
         _enable = enablePort;
     }
 
@@ -249,6 +251,17 @@ public class ModbusRtuClient : ModbusClientBase
         SetEnable(false);
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    protected override byte[] GenerateReportMessage(byte modbusAddress)
+    {
+        var message = new byte[4]; // fn 0x11 is always 4 bytes
+        message[0] = modbusAddress;
+        message[1] = (byte)0x11;
+        RtuHelpers.FillCRC(message);
+
+        return message;
     }
 
     /// <inheritdoc/>

@@ -38,6 +38,11 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     public bool IsDisposed { get; private set; }
 
     /// <summary>
+    /// Generates the message for requesting a device report its identifier
+    /// </summary>
+    protected abstract byte[] GenerateReportMessage(byte modbusAddress);
+
+    /// <summary>
     /// Generates the message for writing data to a Modbus device.
     /// </summary>
     protected abstract byte[] GenerateWriteMessage(byte modbusAddress, ModbusFunction function, ushort register, byte[] data);
@@ -252,6 +257,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         }
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadHoldingRegister, startRegister, registerCount);
+
         if (!await _syncRoot.WaitAsync(LockTimeoutMs))
         {
             return Array.Empty<ushort>();
@@ -276,6 +282,34 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
             registers[i] = (ushort)((result[i * 2] << 8) | (result[(i * 2) + 1]));
         }
         return registers;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="modbusAddress"></param>
+    /// <returns></returns>
+    public async Task<byte[]> ReadDeviceId(byte modbusAddress)
+    {
+        var message = GenerateReportMessage(modbusAddress);
+
+        if (!await _syncRoot.WaitAsync(LockTimeoutMs))
+        {
+            return Array.Empty<byte>();
+        }
+
+        byte[] result;
+
+        try
+        {
+            await DeliverMessage(message);
+            result = await ReadResult(ModbusFunction.ReportId);
+            return result;
+        }
+        finally
+        {
+            _syncRoot.Release();
+        }
     }
 
     /// <summary>
