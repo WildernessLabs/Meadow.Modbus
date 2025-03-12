@@ -48,7 +48,7 @@ public class SerialPortShim : ISerialPort, IDisposable
     /// <inheritdoc/>
     public StopBits StopBits
     {
-        get => (StopBits)_port.StopBits - 1;
+        get => (StopBits)_port.StopBits;
         set => _port.StopBits = (System.IO.Ports.StopBits)value;
     }
 
@@ -71,7 +71,7 @@ public class SerialPortShim : ISerialPort, IDisposable
     /// <param name="stopBits">The stop bits setting for communication.</param>
     public SerialPortShim(string portName, int baudRate, Parity parity, int dataBits, StopBits stopBits)
     {
-        _port = new System.IO.Ports.SerialPort(portName, baudRate, (System.IO.Ports.Parity)parity, dataBits, (System.IO.Ports.StopBits)stopBits + 1);
+        _port = new System.IO.Ports.SerialPort(portName, baudRate, (System.IO.Ports.Parity)parity, dataBits, (System.IO.Ports.StopBits)stopBits);
     }
 
     /// <inheritdoc/>
