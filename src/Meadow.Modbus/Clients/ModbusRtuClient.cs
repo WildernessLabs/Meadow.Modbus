@@ -12,9 +12,9 @@ public class ModbusRtuClient : ModbusClientBase
 {
     private const int HEADER_DATA_OFFSET = 4;
 
-    private ISerialPort _port;
-    private IDigitalOutputPort? _enable;
-    private Stopwatch _stopwatch = new Stopwatch();
+    private readonly ISerialPort _port;
+    private readonly IDigitalOutputPort? _enable;
+    private readonly Stopwatch _stopwatch = new Stopwatch();
 
     /// <summary>
     /// Gets the name of the port used by the Modbus RTU client.
@@ -107,33 +107,28 @@ public class ModbusRtuClient : ModbusClientBase
                 if ((Timeout.TotalMilliseconds > 0) && (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds))
                 {
                     _port.ClearReceiveBuffer();
-
                     throw new TimeoutException();
                 }
                 await Task.Delay(10);
             }
 
-            int headerLen = function switch
-            {
-                ModbusFunction.WriteMultipleRegisters => 6,
-                _ => 3
-            };
-
+            // Standard header size for all functions is 3 bytes
+            const int headerLen = 3;
             var header = new byte[headerLen];
 
-            // first read 3 bytes so we can look for an error
+            // Read the standard 3-byte header (address, function code, data length/start)
             var read = 0;
-            while (read < 3)
+            while (read < headerLen)
             {
                 if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
                 {
                     _port.ClearReceiveBuffer();
                     throw new TimeoutException();
                 }
-                read += _port.Read(header, read, 3 - read);
+                read += _port.Read(header, read, headerLen - read);
             }
 
-            // check for an error bit (MSB in byte 2)
+            // Check for an error bit (MSB in byte 2)
             if ((header[1] & 0x80) != 0)
             {
                 // an error response has come back - read the remaining 2 bytes (CRC of the error)
@@ -156,7 +151,7 @@ public class ModbusRtuClient : ModbusClientBase
                 expectedCrc = RtuHelpers.Crc(errpacket, 0, errpacket.Length - 2);
                 actualCrc = (ushort)(errpacket[errpacket.Length - 2] | errpacket[errpacket.Length - 1] << 8);
 
-            _port.ClearReceiveBuffer();
+                _port.ClearReceiveBuffer();
 
                 if (expectedCrc != actualCrc)
                 {
@@ -166,55 +161,49 @@ public class ModbusRtuClient : ModbusClientBase
                 throw new ModbusException(errorCode, function);
             }
 
-            // read the remainder of the header
-            if (headerLen > 3)
-            {
-                read = 0;
-                while (read < headerLen - 2)
-                {
-                    if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
-                    {
-                        _port.ClearReceiveBuffer();
-                        throw new TimeoutException();
-                    }
-                    read += _port.Read(header, 3, headerLen - 3);
-                }
-            }
-
             int bufferLen;
             int resultLen;
 
+            // Determine total message length and result data length based on function code
             switch (function)
             {
                 case ModbusFunction.WriteRegister:
-                case ModbusFunction.WriteMultipleCoils:
                 case ModbusFunction.WriteCoil:
-                    bufferLen = 8; //fixed length
-                    resultLen = 0; //no result data
-                    break;
+                case ModbusFunction.WriteMultipleCoils:
                 case ModbusFunction.WriteMultipleRegisters:
-                    bufferLen = 7 + header[headerLen - 1];
-                    resultLen = header[2];
+                    // Fixed-length responses: addr + func + 2 addr + 2 value/count + 2 CRC = 8 bytes
+                    bufferLen = 8;
+                    resultLen = 0; // No data payload to extract
                     break;
+
                 case ModbusFunction.ReadHoldingRegister:
-                    bufferLen = 5 + header[headerLen - 1];
+                case ModbusFunction.ReadInputRegister:
+                case ModbusFunction.ReadCoil:
+                case ModbusFunction.ReadDiscrete:
+                    // Variable-length responses: length is in the 3rd byte of header
+                    bufferLen = 3 + header[2] + 2; // addr + func + len + data + CRC
                     resultLen = header[2];
                     break;
+
                 case ModbusFunction.ReportId:
-                    bufferLen = 5 + header[headerLen - 1] + 1; // run indicator byte right before the CRC
+                    // Special case for ReportId which has a run indicator byte before CRC
+                    bufferLen = 3 + header[2] + 1 + 2; // addr + func + len + data + run indicator + CRC
                     resultLen = header[2];
                     break;
+
                 default:
-                    bufferLen = 5 + header[headerLen - 1];
+                    // General case for other functions
+                    bufferLen = 3 + header[2] + 2; // addr + func + len + data + CRC
                     resultLen = header[2];
                     break;
             }
 
-            var buffer = new byte[bufferLen]; // header + length + CRC
+            var buffer = new byte[bufferLen];
 
-            // the CRC includes the header, so we need those in the buffer
+            // Copy the header we already read
             Array.Copy(header, buffer, headerLen);
 
+            // Read the rest of the message
             read = headerLen;
             while (read < buffer.Length)
             {
@@ -226,7 +215,7 @@ public class ModbusRtuClient : ModbusClientBase
                 read += _port.Read(buffer, read, buffer.Length - read);
             }
 
-            // do a CRC on all but the last 2 bytes, then see if that matches the last 2
+            // Verify CRC
             expectedCrc = RtuHelpers.Crc(buffer, 0, buffer.Length - 2);
             actualCrc = (ushort)(buffer[buffer.Length - 2] | buffer[buffer.Length - 1] << 8);
 
@@ -238,12 +227,14 @@ public class ModbusRtuClient : ModbusClientBase
             }
 
             if (resultLen == 0)
-            {   //happens on write multiples
+            {
+                // No data to extract (write operations)
                 return new byte[0];
             }
 
+            // Extract the result data
             var result = new byte[resultLen];
-            Array.Copy(buffer, headerLen, result, 0, result.Length);
+            Array.Copy(buffer, headerLen, result, 0, resultLen);
 
             return result;
         }

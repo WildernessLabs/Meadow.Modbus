@@ -7,15 +7,15 @@ namespace Meadow.Modbus;
 /// <summary>
 /// Delegate for handling Modbus read requests.
 /// </summary>
-public delegate IModbusResult ReadDelegate(byte modbusAddress, ushort startRegister, short length);
+public delegate IModbusResult? ReadDelegate(byte modbusAddress, ushort startRegister, short length);
 /// <summary>
 /// Delegate for handling Modbus write coil requests.
 /// </summary>
-public delegate IModbusResult WriteCoilDelegate(byte modbusAddress, ushort startRegister, bool[] data);
+public delegate IModbusResult? WriteCoilDelegate(byte modbusAddress, ushort startRegister, bool[] data);
 /// <summary>
 /// Delegate for handling Modbus write register requests.
 /// </summary>
-public delegate IModbusResult WriteRegisterDelegate(byte modbusAddress, ushort startRegister, ushort[] data);
+public delegate IModbusResult? WriteRegisterDelegate(byte modbusAddress, ushort startRegister, ushort[] data);
 
 /// <summary>
 /// Represents a Modbus TCP server.
