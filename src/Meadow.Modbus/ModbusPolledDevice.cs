@@ -80,12 +80,12 @@ public abstract class ModbusPolledDevice
     /// </summary>
     protected byte BusAddress { get; set; }
 
-    private ModbusClientBase _client;
-    private Timer _timer;
-    private int _refreshPeriosMs;
+    private readonly ModbusClientBase _client;
+    private readonly Timer _timer;
+    private readonly int _refreshPeriosMs;
 
-    private List<RegisterMapping> _holdingRegisterMap = new();
-    private List<RegisterMapping> _inputRegisterMap = new();
+    private readonly List<RegisterMapping> _holdingRegisterMap = new();
+    private readonly List<RegisterMapping> _inputRegisterMap = new();
 
     /// <summary>
     /// Starts polling the Modbus device.
