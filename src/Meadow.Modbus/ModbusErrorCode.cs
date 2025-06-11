@@ -21,9 +21,9 @@ public enum ModbusErrorCode
     IllegalDataValue = 3,
 
     /// <summary>
-    /// Slave device failure error code.
+    /// Device failure error code.
     /// </summary>
-    SlaveDeviceFailure = 4,
+    DeviceFailure = 4,
 
     /// <summary>
     /// Acknowledgment error code.
@@ -31,9 +31,9 @@ public enum ModbusErrorCode
     Ack = 5,
 
     /// <summary>
-    /// Slave is busy error code.
+    /// Device is busy error code.
     /// </summary>
-    SlaveIsBusy = 6,
+    DeviceIsBusy = 6,
 
     /// <summary>
     /// Gate path unavailable error code.

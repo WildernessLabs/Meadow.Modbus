@@ -93,7 +93,7 @@ public class ModbusRtuClient : ModbusClientBase
     }
 
     /// <inheritdoc/>
-    protected override async Task<byte[]> ReadResult(ModbusFunction function)
+    protected override async Task<byte[]> ReadResult(ModbusFunction function, byte expectedAddress)
     {
         // the response must be at least 5 bytes, so wait for at least that much to come in
         _stopwatch.Restart();
@@ -126,6 +126,12 @@ public class ModbusRtuClient : ModbusClientBase
                     throw new TimeoutException();
                 }
                 read += _port.Read(header, read, headerLen - read);
+            }
+
+            if (header[0] != expectedAddress)
+            {
+                _port.ClearReceiveBuffer();
+                throw new Exception($"Response from device {header[0]}, expected {expectedAddress}");
             }
 
             // Check for an error bit (MSB in byte 2)
@@ -245,7 +251,7 @@ public class ModbusRtuClient : ModbusClientBase
     }
 
     /// <inheritdoc/>
-    protected override Task DeliverMessage(byte[] message)
+    protected override async Task DeliverMessage(byte[] message)
     {
         SetEnable(true);
 
@@ -254,14 +260,28 @@ public class ModbusRtuClient : ModbusClientBase
         _port.ClearReceiveBuffer();
 
         _port.Write(message);
+
         // the above call to the OS transfers data to the serial buffer - it does *not* mean all data has gone out on the wire
         // we must wait for all data to get transmitted before lowering the enable line
+
+        // Calculate time needed to transmit all bytes
+        var sb = _port.StopBits switch
+        {
+            StopBits.One => 1f,
+            StopBits.OnePointFive => 1.5f,
+            StopBits.Two => 2,
+            _ => 0
+        };
+
+        var bitsPerByte = 1 + _port.DataBits + (_port.Parity != Parity.None ? 1 : 0) + sb;
+        var transmissionTimeMs = (message.Length * bitsPerByte * 1000.0) / _port.BaudRate;
+
+        // Add small safety margin
+        await Task.Delay((int)Math.Ceiling(transmissionTimeMs) + 2);
 
         PostWriteDelayAction?.Invoke(message);
 
         SetEnable(false);
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
