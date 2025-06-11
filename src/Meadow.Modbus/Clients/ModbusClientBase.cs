@@ -60,7 +60,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     /// <summary>
     /// Reads the result of the Modbus function.
     /// </summary>
-    protected abstract Task<byte[]> ReadResult(ModbusFunction function);
+    protected abstract Task<byte[]> ReadResult(ModbusFunction function, byte expectedAddress);
 
     /// <summary>
     /// Connects to the Modbus device.
@@ -163,7 +163,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            await ReadResult(ModbusFunction.WriteRegister);
+            await ReadResult(ModbusFunction.WriteRegister, modbusAddress);
         }
         finally
         {
@@ -209,7 +209,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            await ReadResult(ModbusFunction.WriteMultipleRegisters);
+            await ReadResult(ModbusFunction.WriteMultipleRegisters, modbusAddress);
         }
         finally
         {
@@ -268,7 +268,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReadHoldingRegister);
+            result = await ReadResult(ModbusFunction.ReadHoldingRegister, modbusAddress);
             if (result.Length == 0) return Array.Empty<ushort>();
         }
         finally
@@ -303,7 +303,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReportId);
+            result = await ReadResult(ModbusFunction.ReportId, modbusAddress);
             return result;
         }
         finally
@@ -342,7 +342,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReadInputRegister);
+            result = await ReadResult(ModbusFunction.ReadInputRegister, modbusAddress);
         }
         finally
         {
@@ -372,7 +372,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            await ReadResult(ModbusFunction.WriteCoil);
+            await ReadResult(ModbusFunction.WriteCoil, modbusAddress);
         }
         finally
         {
@@ -407,7 +407,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            await ReadResult(ModbusFunction.WriteMultipleRegisters);
+            await ReadResult(ModbusFunction.WriteMultipleRegisters, modbusAddress);
         }
         catch (Exception ex)
         {
@@ -435,7 +435,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         try
         {
             await DeliverMessage(message);
-            result = await ReadResult(ModbusFunction.ReadCoil);
+            result = await ReadResult(ModbusFunction.ReadCoil, modbusAddress);
         }
         finally
         {

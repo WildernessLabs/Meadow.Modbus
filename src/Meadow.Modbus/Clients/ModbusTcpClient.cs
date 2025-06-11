@@ -28,7 +28,7 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
 
     private TcpClient _client;
     private ushort _transaction = 0;
-    private byte[] _responseBuffer = new byte[300]; // I think the max is 9 + 255, but this gives a little room
+    private readonly byte[] _responseBuffer = new byte[300]; // I think the max is 9 + 255, but this gives a little room
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ModbusTcpClient"/> class using the specified destination address and port.
@@ -263,7 +263,7 @@ public class ModbusTcpClient : ModbusClientBase, IDisposable
     }
 
     /// <inheritdoc/>
-    protected override async Task<byte[]> ReadResult(ModbusFunction function)
+    protected override async Task<byte[]> ReadResult(ModbusFunction function, byte expectedAddress)
     {
         if (Destination.Equals(IPAddress.None))
         {
