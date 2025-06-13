@@ -107,7 +107,8 @@ public class ModbusRtuClient : ModbusClientBase
                 if ((Timeout.TotalMilliseconds > 0) && (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds))
                 {
                     _port.ClearReceiveBuffer();
-                    throw new TimeoutException();
+
+                    throw new TimeoutException("Timeout waiting for message header");
                 }
                 await Task.Delay(10);
             }
@@ -123,7 +124,7 @@ public class ModbusRtuClient : ModbusClientBase
                 if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
                 {
                     _port.ClearReceiveBuffer();
-                    throw new TimeoutException();
+                    throw new TimeoutException("Timeout reading message header");
                 }
                 read += _port.Read(header, read, headerLen - read);
             }
@@ -216,7 +217,7 @@ public class ModbusRtuClient : ModbusClientBase
                 if (_stopwatch.ElapsedMilliseconds > Timeout.TotalMilliseconds)
                 {
                     _port.ClearReceiveBuffer();
-                    throw new TimeoutException();
+                    throw new TimeoutException("Timeout waiting for message payload");
                 }
                 read += _port.Read(buffer, read, buffer.Length - read);
             }
@@ -235,7 +236,7 @@ public class ModbusRtuClient : ModbusClientBase
             if (resultLen == 0)
             {
                 // No data to extract (write operations)
-                return new byte[0];
+                return [0];
             }
 
             // Extract the result data
@@ -279,6 +280,7 @@ public class ModbusRtuClient : ModbusClientBase
         // Add small safety margin
         await Task.Delay((int)Math.Ceiling(transmissionTimeMs) + 2);
 
+        // this is for implementations that manually are toggling RTS for the 485 transceiver
         PostWriteDelayAction?.Invoke(message);
 
         SetEnable(false);
