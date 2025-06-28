@@ -100,14 +100,28 @@
                         Content="{Binding DeviceName}"
                         >
                     </Label>
-                    <Button
-                        Command="{Binding DiscoverCommand}"
+                    <StackPanel
+                        Orientation="Horizontal"
                         HorizontalAlignment="Center"
-                        FontSize="20"
-                        Width="150"
-                        Margin="5">
-                        Discover
-                    </Button>
+                        Margin="3">
+                        <Button
+                            Command="{Binding DiscoverCommand}"
+                            HorizontalAlignment="Center"
+                            FontSize="20"
+                            Width="150"
+                            Margin="5,5,20,5">
+                            Discover
+                        </Button>
+
+                        <Button
+                            Command="{Binding TestCommand}"
+                            HorizontalAlignment="Center"
+                            FontSize="20"
+                            Width="150"
+                            Margin="5,5,20,5">
+                            Test at
+                        </Button>
+                    </StackPanel>
                     <StackPanel 
                         Orientation="Horizontal"
                         HorizontalAlignment="Center"
@@ -115,7 +129,7 @@
                         <Label
                             FontSize="20"
                             VerticalAlignment="Center"
-                            >Change device at</Label>
+                            >Device at</Label>
                         <TextBox
                             Width="80"
                             Height="40"

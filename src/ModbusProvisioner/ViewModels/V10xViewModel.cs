@@ -15,17 +15,27 @@ public class V10xViewModel : DeviceViewModel
     {
     }
 
-    public override async Task OnDiscoverClicked()
+    public override Task OnTestClicked()
+    {
+        return CheckAtAddress(CurrentAddress);
+    }
+
+    public override Task OnDiscoverClicked()
+    {
+        return CheckAtAddress(DiscoverAddress);
+    }
+
+    private async Task CheckAtAddress(byte address)
     {
         if (ModbusClient == null) { return; }
 
         // query the modbus address
         try
         {
-            var t = new V10x(ModbusClient, DiscoverAddress);
+            var t = new V10x(ModbusClient, address);
             RaiseStatusChanged($"Searching...");
             CurrentAddress = await t.ReadModbusAddress();
-            RaiseStatusChanged($"Device found at address {CurrentAddress}");
+            RaiseStatusChanged($"Device found at address {address}");
         }
         catch (ModbusException mex)
         {

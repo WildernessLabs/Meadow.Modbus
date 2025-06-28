@@ -6,24 +6,36 @@ namespace ModbusProvisioner.ViewModels;
 
 public class Y4000ViewModel : DeviceViewModel
 {
+    public const byte DiscoverAddress = 1;
+
     public override string DeviceName => "Y4000 Sonde";
 
     public Y4000ViewModel()
     {
     }
 
-    public override async Task OnDiscoverClicked()
+    public override Task OnTestClicked()
+    {
+        return CheckAtAddress(CurrentAddress);
+    }
+
+    public override Task OnDiscoverClicked()
+    {
+        return CheckAtAddress(DiscoverAddress);
+    }
+
+    private async Task CheckAtAddress(byte address)
     {
         if (ModbusClient == null) { return; }
 
         // query the modbus address
         try
         {
-            var t = new Y4000(ModbusClient, CurrentAddress);
-            RaiseStatusChanged($"Checking {CurrentAddress}...");
+            var t = new Y4000(ModbusClient, address);
+            RaiseStatusChanged($"Checking {address}...");
             var sn = await t.GetSerialNumber();
             // TODO: verify the SN is a Y4000?
-            RaiseStatusChanged($"Device {sn} found at address {CurrentAddress}");
+            RaiseStatusChanged($"Device {sn} found at address {address}");
         }
         catch (Exception ex)
         {

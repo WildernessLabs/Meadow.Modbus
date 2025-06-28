@@ -15,8 +15,14 @@ public class SPM1xViewModel : DeviceViewModel
     {
     }
 
-    public override async Task OnDiscoverClicked()
+    private async Task CheckAtAddress(byte address)
     {
+        if (address < 1)
+        {
+            RaiseStatusChanged($"Address must be 1-254");
+            return;
+        }
+
         if (ModbusClient == null)
         {
             RaiseStatusChanged($"Connect to a serial port");
@@ -25,11 +31,11 @@ public class SPM1xViewModel : DeviceViewModel
 
         try
         {
-            RaiseStatusChanged($"Searching...");
-            var powerMeter = new Spm1x(ModbusClient, DiscoverAddress);
+            RaiseStatusChanged($"Check address {address}...");
+            var powerMeter = new Spm1x(ModbusClient, address);
             var baud = await powerMeter.GetBaudRate();
             CurrentAddress = powerMeter.ModbusAddress;
-            RaiseStatusChanged($"Device found at address {CurrentAddress}");
+            RaiseStatusChanged($"Device found at address {powerMeter.ModbusAddress}");
         }
         catch (Exception ex)
         {
@@ -37,27 +43,50 @@ public class SPM1xViewModel : DeviceViewModel
         }
     }
 
+    public override Task OnTestClicked()
+    {
+        return CheckAtAddress(CurrentAddress);
+    }
+
+    public override Task OnDiscoverClicked()
+    {
+        return CheckAtAddress(DiscoverAddress);
+    }
+
     protected async override Task OnSetAddressClicked()
     {
-        if (ModbusClient == null) { return; }
-
-        if (CurrentAddress < 1 || CurrentAddress > 250)
+        if (ModbusClient == null)
         {
-            RaiseStatusChanged("Current address must be 1-250");
+            RaiseStatusChanged($"Connect to a serial port");
             return;
         }
 
-        if (NewAddress < 1 || NewAddress > 250)
+        if (CurrentAddress < 1 || CurrentAddress > 254)
+        {
+            RaiseStatusChanged("Address must be 1-250");
+            return;
+        }
+
+        if (NewAddress < 0 || NewAddress > 250)
         {
             RaiseStatusChanged("New address must be 1-250");
             return;
         }
 
-        var powerMeter = new Spm1x(ModbusClient, DiscoverAddress);
+        var powerMeter = new Spm1x(ModbusClient, CurrentAddress);
 
-        var baud = await powerMeter.GetBaudRate();
+        int baud;
+        try
+        {
+            baud = await powerMeter.GetBaudRate();
+        }
+        catch (TimeoutException)
+        {
+            RaiseStatusChanged($"No device at {CurrentAddress}");
+            return;
+        }
 
-        if (powerMeter.ModbusAddress != NewAddress)
+        if (NewAddress != 0 && powerMeter.ModbusAddress != NewAddress)
         {
             // this is going to time out waiting on a response
             try
@@ -84,8 +113,9 @@ public class SPM1xViewModel : DeviceViewModel
                 case 19200:
                     try
                     {
+                        // read the current rate to see if we can communicate with it
                         RaiseStatusChanged("Setting baud rate...");
-                        await powerMeter.SetModbusAddress(NewAddress);
+                        await powerMeter.SetBaudRate(NewBaudRate.Value);
                     }
                     catch (TimeoutException)
                     {

@@ -50,7 +50,17 @@ public class K114ViewModel : DeviceViewModel
         }
     }
 
-    public override async Task OnDiscoverClicked()
+    public override Task OnTestClicked()
+    {
+        return CheckAtAddress(CurrentAddress);
+    }
+
+    public override Task OnDiscoverClicked()
+    {
+        return CheckAtAddress(DiscoverAddress);
+    }
+
+    private async Task CheckAtAddress(byte address)
     {
         if (ModbusClient == null)
         {
@@ -61,10 +71,10 @@ public class K114ViewModel : DeviceViewModel
         // query the modbus address
         try
         {
-            var t = new KellerTransducer(ModbusClient, DiscoverAddress);
+            var t = new KellerTransducer(ModbusClient, address);
             RaiseStatusChanged($"Searching...");
             CurrentAddress = await t.ReadModbusAddress();
-            RaiseStatusChanged($"Device found at address {CurrentAddress}");
+            RaiseStatusChanged($"Device found at address {address}");
 
 
             // TODO: query the serial number?

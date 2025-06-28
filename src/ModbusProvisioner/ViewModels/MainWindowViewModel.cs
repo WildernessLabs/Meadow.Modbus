@@ -130,7 +130,7 @@ public class MainWindowViewModel : ViewModelBase
             try
             {
                 var p = new SerialPortShim(_selectedPort, SelectedBaudRate, Meadow.Hardware.Parity.None, 8, Meadow.Hardware.StopBits.One);
-                _modbusClient = new ModbusRtuClient(p);
+                _modbusClient = new ModbusRtuClient(p, TimeSpan.FromMilliseconds(500));
                 _modbusClient.Connect();
 
                 DeviceViewModel.ModbusClient = _modbusClient;

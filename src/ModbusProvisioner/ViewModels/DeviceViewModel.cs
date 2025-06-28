@@ -17,15 +17,18 @@ public abstract class DeviceViewModel : ViewModelBase
 
     public ICommand SetAddressCommand { get; }
     public ICommand DiscoverCommand { get; }
+    public ICommand TestCommand { get; }
 
     public DeviceViewModel()
     {
         SetAddressCommand = ReactiveCommand.CreateFromTask(OnSetAddressClicked);
         DiscoverCommand = ReactiveCommand.CreateFromTask(OnDiscoverClicked);
+        TestCommand = ReactiveCommand.CreateFromTask(OnTestClicked);
     }
 
     protected abstract Task OnSetAddressClicked();
     public abstract Task OnDiscoverClicked();
+    public abstract Task OnTestClicked();
 
     public abstract string DeviceName { get; }
     public virtual bool SupportsBaudRateChange => false;
