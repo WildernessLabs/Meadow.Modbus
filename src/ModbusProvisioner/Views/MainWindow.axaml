@@ -82,6 +82,13 @@
                     Margin="5">
                     SPM1-X
                 </Button>
+                <Button
+                    Command="{Binding T3ClickCommand}"
+                    FontSize="20"
+                    Width="150"
+                    Margin="5">
+                    T3
+                </Button>
             </StackPanel>
 
             <Border

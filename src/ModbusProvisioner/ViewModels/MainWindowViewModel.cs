@@ -20,6 +20,7 @@ public class MainWindowViewModel : ViewModelBase
     private Y4000ViewModel? _y4000ViewModel;
     private V10xViewModel? _v10xViewModel;
     private SPM1xViewModel? _sPM1ViewModel;
+    private T322ViewModel? _t322ViewModel;
     private DeviceViewModel? _activeDeviceViewModel;
     private string? _status;
     private int _selectedRate = 9600;
@@ -30,6 +31,7 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand RefreshPortsCommand { get; }
     public ICommand V10xClickCommand { get; }
     public ICommand SPM1xClickCommand { get; }
+    public ICommand T3ClickCommand { get; }
 
     public DeviceViewModel DeviceViewModel
     {
@@ -68,6 +70,8 @@ public class MainWindowViewModel : ViewModelBase
         PortActionCommand = ReactiveCommand.Create(OnPortActionClick);
         RefreshPortsCommand = ReactiveCommand.Create(OnRefreshPortsClick);
         SPM1xClickCommand = ReactiveCommand.Create(OnSPM1xClick);
+        T3ClickCommand = ReactiveCommand.Create(OnT3Click);
+
         RefreshPorts();
     }
 
@@ -151,6 +155,17 @@ public class MainWindowViewModel : ViewModelBase
             PortActionText = "Open";
             Status = "Serial port closed";
         }
+    }
+
+    private void OnT3Click()
+    {
+        if (_t322ViewModel == null)
+        {
+            _t322ViewModel = new T322ViewModel();
+        }
+
+        DeviceViewModel = _t322ViewModel;
+        DeviceViewModel.ModbusClient = this._modbusClient;
     }
 
     private void OnSPM1xClick()

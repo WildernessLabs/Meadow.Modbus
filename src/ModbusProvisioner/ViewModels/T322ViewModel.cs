@@ -1,17 +1,17 @@
-﻿using Meadow.Foundation.Sensors.Power;
+﻿using Meadow.Foundation.IOExpanders;
 using System;
 using System.Threading.Tasks;
 
 namespace ModbusProvisioner.ViewModels;
 
-public class SPM1xViewModel : DeviceViewModel
+public class T322ViewModel : DeviceViewModel
 {
     public const byte DiscoverAddress = 1;
 
-    public override string DeviceName => "SPM1-X Power Meter";
+    public override string DeviceName => "T3-22ai I/O Module";
     public override bool SupportsBaudRateChange => true;
 
-    public SPM1xViewModel()
+    public T322ViewModel()
     {
     }
 
@@ -41,11 +41,11 @@ public class SPM1xViewModel : DeviceViewModel
 
         try
         {
-            RaiseStatusChanged($"Check address {address}...");
-            var powerMeter = new Spm1x(ModbusClient, address);
-            var baud = await powerMeter.GetBaudRate();
-            CurrentAddress = powerMeter.ModbusAddress;
-            RaiseStatusChanged($"Device found at address {powerMeter.ModbusAddress}");
+            RaiseStatusChanged($"Checking address {address}...");
+            var module = new T322ai(ModbusClient, address);
+            var sn = await module.ReadSerialNumber();
+            CurrentAddress = module.ModbusAddress;
+            RaiseStatusChanged($"Device found at address {module.ModbusAddress}");
         }
         catch (Exception ex)
         {
@@ -73,12 +73,12 @@ public class SPM1xViewModel : DeviceViewModel
             return;
         }
 
-        var powerMeter = new Spm1x(ModbusClient, CurrentAddress);
+        var module = new T322ai(ModbusClient, CurrentAddress);
 
-        int baud;
+        int sn;
         try
         {
-            baud = await powerMeter.GetBaudRate();
+            sn = await module.ReadSerialNumber();
         }
         catch (TimeoutException)
         {
@@ -86,13 +86,13 @@ public class SPM1xViewModel : DeviceViewModel
             return;
         }
 
-        if (NewAddress != 0 && powerMeter.ModbusAddress != NewAddress)
+        if (NewAddress != 0 && module.ModbusAddress != NewAddress)
         {
             // this is going to time out waiting on a response
             try
             {
                 RaiseStatusChanged("Setting address...");
-                await powerMeter.SetModbusAddress(NewAddress);
+                await module.WriteModbusAddress(NewAddress);
             }
             catch (TimeoutException)
             {
@@ -111,11 +111,14 @@ public class SPM1xViewModel : DeviceViewModel
             {
                 case 9600:
                 case 19200:
+                case 38400:
+                case 57600:
+                case 115200:
                     try
                     {
                         // read the current rate to see if we can communicate with it
                         RaiseStatusChanged("Setting baud rate...");
-                        await powerMeter.SetBaudRate(NewBaudRate.Value);
+                        await module.WriteBaudRate(NewBaudRate.Value);
                     }
                     catch (TimeoutException)
                     {
@@ -127,7 +130,7 @@ public class SPM1xViewModel : DeviceViewModel
                     }
                     break;
                 default:
-                    RaiseStatusChanged($"Devices supports only 9600, 19200");
+                    RaiseStatusChanged($"Devices supports only 9600, 19200, 38400, 57600, 19200");
                     break;
             }
         }
