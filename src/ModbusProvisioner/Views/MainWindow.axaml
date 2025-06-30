@@ -8,7 +8,7 @@
         x:Class="ModbusProvisioner.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Clean Water Services Modbus Provisioner">
+        Title="Wilderness Labs Modbus Provisioner">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
