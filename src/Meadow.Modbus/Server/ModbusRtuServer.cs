@@ -200,7 +200,7 @@ public class ModbusRtuServer : IModbusServer
             // Wait for the first byte
             while (_port.BytesToRead == 0 && !timeoutCts.Token.IsCancellationRequested)
             {
-                await Task.Delay(1, timeoutCts.Token);
+                await Task.Delay(5, timeoutCts.Token);
             }
 
             if (timeoutCts.Token.IsCancellationRequested)
@@ -228,7 +228,7 @@ public class ModbusRtuServer : IModbusServer
                         break; // End of frame
                     }
 
-                    await Task.Delay(1, timeoutCts.Token);
+                    await Task.Delay(5, timeoutCts.Token);
                 }
             }
 
@@ -240,6 +240,11 @@ public class ModbusRtuServer : IModbusServer
             var frame = new byte[bytesRead];
             Array.Copy(buffer, frame, bytesRead);
             return frame;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // This is a timeout, not a real cancellation
+            throw new TimeoutException("Timeout during frame reception");
         }
         finally
         {

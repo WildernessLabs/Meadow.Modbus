@@ -1,0 +1,86 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35506.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModbusProvisioner", "ModbusProvisioner.csproj", "{C2CF55E1-B652-479E-BE9F-ACC5FC9227E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meadow.Modbus", "..\..\Meadow.Modbus\Meadow.Modbus.csproj", "{9F84E8E2-9A71-495B-BDA3-2A9B79B9AC8C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sensors.Environmental.Keller.XLine", "..\..\..\..\Meadow.Foundation\Source\Meadow.Foundation.Peripherals\Sensors.Environmental.Keller.XLine\Driver\Sensors.Environmental.Keller.XLine.csproj", "{076A0132-DD15-4E8B-A3E9-7FCD345050F8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_ref", "_ref", "{6F8DAE09-1B17-4D2A-9315-74D10223FB7F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sensors.Environmental.Y4000", "..\..\..\..\Meadow.Foundation\Source\Meadow.Foundation.Peripherals\Sensors.Environmental.Y4000\Driver\Sensors.Environmental.Y4000.csproj", "{F70B11FA-3745-4BEE-9E93-BE58983FEA8D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Batteries.Voltaic.V10x", "..\..\..\..\Meadow.Foundation\Source\Meadow.Foundation.Peripherals\Batteries.Voltaic.V10x\Driver\Batteries.Voltaic.V10x.csproj", "{66B82276-C7B4-41E7-B783-6BE0FF3CA086}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IOExpanders.T3xxx", "..\..\..\..\Meadow.Foundation\Source\Meadow.Foundation.Peripherals\IOExpanders.T3xxx\Driver\IOExpanders.T3xxx.csproj", "{E2D49675-A332-B973-B629-7BE621CCCFA2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sensors.Power.Spm1x", "..\..\..\..\Meadow.Foundation\Source\Meadow.Foundation.Peripherals\Sensors.Power.Spm1x\Driver\Sensors.Power.Spm1x.csproj", "{E0A70532-27C0-1E99-94AD-3008F6EBEE01}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{089100B1-113F-4E66-888A-E83F3999EAFD}"
+	ProjectSection(SolutionItems) = preProject
+		..\Directory.Packages.props = ..\Directory.Packages.props
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C2CF55E1-B652-479E-BE9F-ACC5FC9227E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2CF55E1-B652-479E-BE9F-ACC5FC9227E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2CF55E1-B652-479E-BE9F-ACC5FC9227E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2CF55E1-B652-479E-BE9F-ACC5FC9227E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F84E8E2-9A71-495B-BDA3-2A9B79B9AC8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F84E8E2-9A71-495B-BDA3-2A9B79B9AC8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F84E8E2-9A71-495B-BDA3-2A9B79B9AC8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F84E8E2-9A71-495B-BDA3-2A9B79B9AC8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{076A0132-DD15-4E8B-A3E9-7FCD345050F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{076A0132-DD15-4E8B-A3E9-7FCD345050F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{076A0132-DD15-4E8B-A3E9-7FCD345050F8}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{076A0132-DD15-4E8B-A3E9-7FCD345050F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{076A0132-DD15-4E8B-A3E9-7FCD345050F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{076A0132-DD15-4E8B-A3E9-7FCD345050F8}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{F70B11FA-3745-4BEE-9E93-BE58983FEA8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F70B11FA-3745-4BEE-9E93-BE58983FEA8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F70B11FA-3745-4BEE-9E93-BE58983FEA8D}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{F70B11FA-3745-4BEE-9E93-BE58983FEA8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F70B11FA-3745-4BEE-9E93-BE58983FEA8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F70B11FA-3745-4BEE-9E93-BE58983FEA8D}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{66B82276-C7B4-41E7-B783-6BE0FF3CA086}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66B82276-C7B4-41E7-B783-6BE0FF3CA086}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66B82276-C7B4-41E7-B783-6BE0FF3CA086}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{66B82276-C7B4-41E7-B783-6BE0FF3CA086}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66B82276-C7B4-41E7-B783-6BE0FF3CA086}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66B82276-C7B4-41E7-B783-6BE0FF3CA086}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{E2D49675-A332-B973-B629-7BE621CCCFA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2D49675-A332-B973-B629-7BE621CCCFA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2D49675-A332-B973-B629-7BE621CCCFA2}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{E2D49675-A332-B973-B629-7BE621CCCFA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2D49675-A332-B973-B629-7BE621CCCFA2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2D49675-A332-B973-B629-7BE621CCCFA2}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{E0A70532-27C0-1E99-94AD-3008F6EBEE01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0A70532-27C0-1E99-94AD-3008F6EBEE01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0A70532-27C0-1E99-94AD-3008F6EBEE01}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{E0A70532-27C0-1E99-94AD-3008F6EBEE01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0A70532-27C0-1E99-94AD-3008F6EBEE01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0A70532-27C0-1E99-94AD-3008F6EBEE01}.Release|Any CPU.Deploy.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9F84E8E2-9A71-495B-BDA3-2A9B79B9AC8C} = {6F8DAE09-1B17-4D2A-9315-74D10223FB7F}
+		{076A0132-DD15-4E8B-A3E9-7FCD345050F8} = {6F8DAE09-1B17-4D2A-9315-74D10223FB7F}
+		{F70B11FA-3745-4BEE-9E93-BE58983FEA8D} = {6F8DAE09-1B17-4D2A-9315-74D10223FB7F}
+		{66B82276-C7B4-41E7-B783-6BE0FF3CA086} = {6F8DAE09-1B17-4D2A-9315-74D10223FB7F}
+		{E2D49675-A332-B973-B629-7BE621CCCFA2} = {6F8DAE09-1B17-4D2A-9315-74D10223FB7F}
+		{E0A70532-27C0-1E99-94AD-3008F6EBEE01} = {6F8DAE09-1B17-4D2A-9315-74D10223FB7F}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9656C0CB-FB98-47DF-BC02-5E75DDBB2BF7}
+	EndGlobalSection
+EndGlobal

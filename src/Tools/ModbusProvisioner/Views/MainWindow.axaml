@@ -1,0 +1,193 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ModbusProvisioner.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"        
+        Width="700"
+        Height="350"
+        x:Class="ModbusProvisioner.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Wilderness Labs Modbus Provisioner">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <StackPanel>
+        <StackPanel
+            Margin="10"
+            Orientation="Horizontal">
+            <Label
+                FontSize="20"
+                >Port:</Label>
+            <ComboBox
+                Name="portList"
+                FontSize="18"
+                ItemsSource="{Binding Ports}"
+                SelectedItem="{Binding SelectedPort}"
+                Width="150">
+            </ComboBox>
+            <ComboBox
+                FontSize="18"
+                ItemsSource="{Binding BaudRates}"
+                SelectedItem="{Binding SelectedBaudRate}"
+                Width="150">
+            </ComboBox>
+            <Button
+                Command="{Binding RefreshPortsCommand}"
+                FontSize="20"
+                Width="100"
+                Margin="5"
+                Content="Refresh" />
+            <Button
+                Command="{Binding PortActionCommand}"
+                FontSize="20"
+                Width="100"
+                Margin="5"
+                Content="{Binding PortActionText}" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal">
+            <StackPanel
+                Height="200"
+                Margin="10">
+                <Button
+                    Command="{Binding K114ClickCommand}"
+                    FontSize="20"
+                    Width="150"
+                    Margin="5">
+                    K114
+                </Button>
+                <Button
+                    Command="{Binding Y4000ClickCommand}"
+                    FontSize="20"
+                    Width="150"
+                    Margin="5">
+                    Y4000
+                </Button>
+                <Button
+                    Command="{Binding V10xClickCommand}"
+                    FontSize="20"
+                    Width="150"
+                    Margin="5">
+                    V10x
+                </Button>
+                <Button
+                    Command="{Binding SPM1xClickCommand}"
+                    FontSize="20"
+                    Width="150"
+                    Margin="5">
+                    SPM1-X
+                </Button>
+                <Button
+                    Command="{Binding T3ClickCommand}"
+                    FontSize="20"
+                    Width="150"
+                    Margin="5">
+                    T3
+                </Button>
+            </StackPanel>
+
+            <Border
+                BorderThickness="2"
+                BorderBrush="DarkGray"
+                Width="500">
+                
+                <StackPanel
+                    Name="devicePanel"
+                    DataContext="{Binding DeviceViewModel}">
+                    <Label
+                        FontSize="20"
+                        FontWeight="Bold"
+                        HorizontalAlignment="Center"
+                        Name="selectedLabel"
+                        Content="{Binding DeviceName}"
+                        >
+                    </Label>
+                    <StackPanel
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="3">
+                        <Button
+                            Command="{Binding DiscoverCommand}"
+                            HorizontalAlignment="Center"
+                            FontSize="20"
+                            Width="150"
+                            Margin="5,5,20,5">
+                            Discover
+                        </Button>
+
+                        <Button
+                            Command="{Binding TestCommand}"
+                            HorizontalAlignment="Center"
+                            FontSize="20"
+                            Width="150"
+                            Margin="5,5,20,5">
+                            Test at
+                        </Button>
+                    </StackPanel>
+                    <StackPanel 
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="3">
+                        <Label
+                            FontSize="20"
+                            VerticalAlignment="Center"
+                            >Device at</Label>
+                        <TextBox
+                            Width="80"
+                            Height="40"
+                            FontSize="20"
+                            Text="{Binding CurrentAddress}">
+                        </TextBox>
+                    </StackPanel>
+                    <StackPanel 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Center"
+                        Margin="3">
+                        <Label
+                            FontSize="20"
+                            VerticalAlignment="Center"
+                            >To address</Label>
+                        <TextBox
+                            Width="80"
+                            Height="40"
+                            FontSize="20"
+                            Text="{Binding NewAddress}">
+                        </TextBox>
+                        <Label
+                            IsVisible="{Binding SupportsBaudRateChange}"
+                            FontSize="20"
+                            VerticalAlignment="Center"
+                            >and Baud Rate</Label>
+                        <TextBox
+                            Width="80"
+                            Height="40"
+                            FontSize="20"
+                            IsVisible="{Binding SupportsBaudRateChange}"
+                            Text="{Binding NewBaudRate}">
+                        </TextBox>
+                    </StackPanel>
+                    <Button
+                        HorizontalAlignment="Center"
+                        Command="{Binding SetAddressCommand}"
+                        FontSize="20"
+                        Width="150"
+                        Margin="5">
+                        Set
+                    </Button>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <Label
+            FontSize="16"
+            Margin="5"
+            Content="{Binding Status}">
+        </Label>
+    </StackPanel>
+
+</Window>
