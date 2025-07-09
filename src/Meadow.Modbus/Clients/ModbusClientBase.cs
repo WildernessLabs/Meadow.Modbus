@@ -276,6 +276,13 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
             _syncRoot.Release();
         }
 
+        var expectedBytes = registerCount * 2;
+        if (result.Length < expectedBytes)
+        {
+            throw new InvalidOperationException(
+                $"Insufficient data received: expected {expectedBytes} bytes for {registerCount} register(s), but received {result.Length} bytes");
+        }
+
         var registers = new ushort[registerCount];
         for (var i = 0; i < registerCount; i++)
         {
@@ -347,6 +354,13 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         finally
         {
             _syncRoot.Release();
+        }
+
+        var expectedBytes = registerCount * 2;
+        if (result.Length < expectedBytes)
+        {
+            throw new InvalidOperationException(
+                $"Insufficient data received: expected {expectedBytes} bytes for {registerCount} register(s), but received {result.Length} bytes");
         }
 
         var registers = new ushort[result.Length / 2];
