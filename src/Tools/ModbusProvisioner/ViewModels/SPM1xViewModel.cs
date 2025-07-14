@@ -20,9 +20,41 @@ public class SPM1xViewModel : DeviceViewModel
         return CheckAtAddress(CurrentAddress);
     }
 
-    public override Task OnDiscoverClicked()
+    public override async Task OnDiscoverClicked()
     {
-        return CheckAtAddress(DiscoverAddress);
+        if (ModbusClient == null)
+        {
+            RaiseStatusChanged($"Connect to a serial port");
+            return;
+        }
+
+        RaiseStatusChanged($"Searching for SPM1x...");
+        await Task.Delay(1000);
+
+        // we'll cheat and go direct
+        for (byte address = 1; address < 255; address++)
+        {
+            try
+            {
+                var registers = await ModbusClient.ReadHoldingRegisters(address, 0, 8);
+                if (registers.Length == 8)
+                {
+                    // this is SN/address
+                    var sn = BitConverter.ToInt32(new byte[] { (byte)(registers[3] >> 8), (byte)(registers[3] & 0xFF), (byte)(registers[2] >> 8), (byte)(registers[2] & 0xFF) }, 0);
+                    RaiseStatusChanged($"Device {registers[0]} found at address {registers[6]}");
+                    return;
+                }
+            }
+            catch (TimeoutException)
+            {
+                // no device at this address, keep looking
+                RaiseStatusChanged($"Nothing at {address}");
+            }
+            catch (Exception ex)
+            {
+                RaiseStatusChanged(ex.Message);
+            }
+        }
     }
 
     private async Task CheckAtAddress(byte address)

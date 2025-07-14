@@ -260,7 +260,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
 
         if (!await _syncRoot.WaitAsync(LockTimeoutMs))
         {
-            return Array.Empty<ushort>();
+            throw new TimeoutException($"Failed to acquire lock within {LockTimeoutMs}ms for Modbus operation");
         }
 
         byte[] result;
@@ -269,13 +269,19 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         {
             await DeliverMessage(message);
             result = await ReadResult(ModbusFunction.ReadHoldingRegister, modbusAddress);
-            if (result.Length == 0) return Array.Empty<ushort>();
+
+            // In proper Modbus communication, we should NEVER get an empty response for a read operation
+            if (result.Length == 0)
+            {
+                throw new InvalidOperationException($"Device returned empty response for read operation - this indicates a communication or device error");
+            }
         }
         finally
         {
             _syncRoot.Release();
         }
 
+        // Validate that we have enough bytes for the requested registers
         var expectedBytes = registerCount * 2;
         if (result.Length < expectedBytes)
         {
@@ -339,9 +345,10 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         if (registerCount > MaxRegisterReadCount) throw new ArgumentException($"A maximum of {MaxRegisterReadCount} registers can be retrieved at one time");
 
         var message = GenerateReadMessage(modbusAddress, ModbusFunction.ReadInputRegister, startRegister, registerCount);
+
         if (!await _syncRoot.WaitAsync(LockTimeoutMs))
         {
-            return Array.Empty<ushort>();
+            throw new TimeoutException($"Failed to acquire lock within {LockTimeoutMs}ms for Modbus operation");
         }
 
         byte[] result;
@@ -350,12 +357,19 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
         {
             await DeliverMessage(message);
             result = await ReadResult(ModbusFunction.ReadInputRegister, modbusAddress);
+
+            // In proper Modbus communication, we should NEVER get an empty response for a read operation
+            if (result.Length == 0)
+            {
+                throw new InvalidOperationException($"Device returned empty response for read operation - this indicates a communication or device error");
+            }
         }
         finally
         {
             _syncRoot.Release();
         }
 
+        // Validate that we have enough bytes for the requested registers
         var expectedBytes = registerCount * 2;
         if (result.Length < expectedBytes)
         {
@@ -363,14 +377,13 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
                 $"Insufficient data received: expected {expectedBytes} bytes for {registerCount} register(s), but received {result.Length} bytes");
         }
 
-        var registers = new ushort[result.Length / 2];
-        for (var i = 0; i < registers.Length; i++)
+        var registers = new ushort[registerCount];
+        for (var i = 0; i < registerCount; i++)
         {
             registers[i] = (ushort)((result[i * 2] << 8) | (result[(i * 2) + 1]));
         }
         return registers;
     }
-
     /// <inheritdoc/>
     public async Task WriteCoil(byte modbusAddress, ushort register, bool value)
     {
