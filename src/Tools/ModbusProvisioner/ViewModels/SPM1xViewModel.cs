@@ -36,12 +36,17 @@ public class SPM1xViewModel : DeviceViewModel
         {
             try
             {
+                if (!ModbusClient.IsConnected)
+                {
+                    RaiseStatusChanged($"Port disconnected");
+                    return;
+                }
+
                 var registers = await ModbusClient.ReadHoldingRegisters(address, 0, 8);
                 if (registers.Length == 8)
                 {
-                    // this is SN/address
-                    var sn = BitConverter.ToInt32(new byte[] { (byte)(registers[3] >> 8), (byte)(registers[3] & 0xFF), (byte)(registers[2] >> 8), (byte)(registers[2] & 0xFF) }, 0);
-                    RaiseStatusChanged($"Device {registers[0]} found at address {registers[6]}");
+                    var sn = registers[3] << 24 | registers[2] << 16 | registers[1] << 8 | registers[0];
+                    RaiseStatusChanged($"Device {sn} found at address {registers[6]}");
                     return;
                 }
             }

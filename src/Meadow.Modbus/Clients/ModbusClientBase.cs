@@ -17,7 +17,7 @@ public abstract class ModbusClientBase : IModbusBusClient, IDisposable
     private const int MaxCoilReadCount = 0x7d0;
     private const int MaxRegisterWriteCount = 0x7b;
     private const int MaxCoilWriteCount = 0x7b0;
-    private const int LockTimeoutMs = 2000;
+    private const int LockTimeoutMs = 500;
 
     /// <summary>
     /// Event triggered when the client is disconnected.
