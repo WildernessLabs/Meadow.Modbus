@@ -7,8 +7,9 @@ internal class RawMessage
 {
     private byte[] m_data;
 
-    public RawMessage(byte[] buffer, int start, int length)
+    public RawMessage(byte[] buffer, int start, int length, byte unitId)
     {
+        UnitId = unitId;
         m_data = new byte[length];
         Buffer.BlockCopy(buffer, start, m_data, 0, length);
 
@@ -50,4 +51,5 @@ internal class RawMessage
 
     public short WriteRegisterCount => m_data[4];
     public byte[]? WriteRegisterValues { get; private set; }
+    public byte UnitId { get; private set; }
 }

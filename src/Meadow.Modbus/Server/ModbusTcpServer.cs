@@ -204,7 +204,7 @@ public class ModbusTcpServer : IModbusServer, IDisposable
                     }
                     else
                     {
-                        message = new RawMessage(rxBufferBytes, 0 + ModbusTcpHeader.Length, validDataLength - ModbusTcpHeader.Length);
+                        message = new RawMessage(rxBufferBytes, 0 + ModbusTcpHeader.Length, validDataLength - ModbusTcpHeader.Length, header.UnitID);
                     }
 
                     var result = ProcessMessage(message);
@@ -284,38 +284,38 @@ public class ModbusTcpServer : IModbusServer, IDisposable
             case ModbusFunction.ReadCoil:
                 if (ReadCoilRequest != null)
                 {
-                    return ReadCoilRequest(255, message.ReadStart, message.ReadLength);
+                    return ReadCoilRequest(message.UnitId, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.ReadDiscrete:
                 if (ReadDiscreteRequest != null)
                 {
-                    return ReadDiscreteRequest(255, message.ReadStart, message.ReadLength);
+                    return ReadDiscreteRequest(message.UnitId, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.ReadHoldingRegister:
                 if (ReadHoldingRegisterRequest != null)
                 {
-                    return ReadHoldingRegisterRequest(255, message.ReadStart, message.ReadLength);
+                    return ReadHoldingRegisterRequest(message.UnitId, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.ReadInputRegister:
                 if (ReadInputRegisterRequest != null)
                 {
-                    return ReadInputRegisterRequest(255, message.ReadStart, message.ReadLength);
+                    return ReadInputRegisterRequest(message.UnitId, message.ReadStart, message.ReadLength);
                 }
                 return null;
             case ModbusFunction.WriteCoil:
                 if (WriteCoilRequest != null)
                 {
                     // incoming data is always 2 bytes, either 0x0000 or 0xffff
-                    return WriteCoilRequest(255, message.WriteCoilAddress, new bool[] { message.WriteCoilValue });
+                    return WriteCoilRequest(message.UnitId, message.WriteCoilAddress, new bool[] { message.WriteCoilValue });
                 }
                 return null;
             case ModbusFunction.WriteRegister:
                 if (WriteRegisterRequest != null)
                 {
-                    return WriteRegisterRequest.Invoke(255, message.WriteRegisterAddress, new ushort[] { message.WriteRegisterValue });
+                    return WriteRegisterRequest.Invoke(message.UnitId, message.WriteRegisterAddress, new ushort[] { message.WriteRegisterValue });
                 }
                 return null;
             case ModbusFunction.WriteMultipleCoils:
@@ -336,7 +336,7 @@ public class ModbusTcpServer : IModbusServer, IDisposable
                         data[i] = v;
                     }
 
-                    return WriteCoilRequest(255, message.WriteCoilAddress, data);
+                    return WriteCoilRequest(message.UnitId, message.WriteCoilAddress, data);
                 }
                 return null;
             case ModbusFunction.WriteMultipleRegisters:
@@ -352,7 +352,7 @@ public class ModbusTcpServer : IModbusServer, IDisposable
                         data[i] = (ushort)s;
                     }
 
-                    return WriteRegisterRequest(255, message.WriteRegisterAddress, data);
+                    return WriteRegisterRequest(message.UnitId, message.WriteRegisterAddress, data);
                 }
                 return null;
         }
